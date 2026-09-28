@@ -145,3 +145,20 @@ dialog.confirm h3 { font-family: "Fraunces", Georgia, serif; font-size: 1.5rem; 
   from { opacity: 0; transform: translateY(0.6rem) scale(0.94); }
   to { opacity: 1; transform: none; }
 }
+
+/* Kelime oyunu */
+[data-tone="word"], .view[data-sec="word"] { --c: #B5445A; --tint: #F9E2E0; }
+.login-app { margin: 0.4rem 0 0; font-family: "Caveat", cursive; font-size: 1.8rem; color: #FFC9D6; }
+.w-wrap { max-width: 26rem; margin: 0 auto; }
+.w-msg { text-align: center; margin: 0 0 1rem; color: var(--muted); min-height: 1.5rem; }
+.w-grid { display: flex; flex-direction: column; gap: 0.4rem; max-width: 19rem; margin: 0 auto 1.4rem; }
+.w-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; }
+.w-t { aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); font-weight: 700; font-size: 1.6rem; }
+.w-t.fill { border-color: var(--c); }
+.w-t.hit, .w-k.hit { background: #3F8F55; border-color: #3F8F55; color: #FFFFFF; }
+.w-t.near, .w-k.near { background: #C99700; border-color: #C99700; color: #FFFFFF; }
+.w-t.miss, .w-k.miss { background: #5E5A66; border-color: #5E5A66; color: #FFFFFF; }
+.w-kb { display: flex; justify-content: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.w-k { flex: 1 1 0; max-width: 2.7rem; min-width: 0; padding: 0.75rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 600; font-size: 0.95rem; cursor: pointer; }
+.w-k.wide { flex: 1.6 1 0; max-width: 4.2rem; font-size: 0.8rem; }
+.w-k:hover { border-color: var(--c); }
