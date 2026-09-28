@@ -5,13 +5,12 @@ const API = "https://api.jsonbin.io/v3/b";
 const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9y";
 const DEFAULT_BIN = "";
 const VIEW_KEY = "defterim.view";
-const OWNER = "Neri"; // Kenar çubuğunda ve karşılama mesajında görünen isim
+const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
 const SECTIONS = [
   "accounts", "recipes", "notes", "plans", "films", "goals",
-  "emails", "shopping", "health", "growth", "favorites", "doodle",
-  "voice", "mood", "ideas", "wishlist", "countdown"
+  "emails", "growth", "favorites", "doodle", "mood", "ideas", "wishlist"
 ];
-const STACKS = ["recipes", "plans", "shopping", "growth", "wishlist"];
+const STACKS = ["recipes", "plans", "growth", "wishlist"];
 const XP_STEP = 10;
 const XP_WIN = 100;
 const XP_LEVEL = 200;
@@ -41,11 +40,9 @@ const QUOTES = [
   "Nefes al, yavaşla, yeniden başla."
 ];
 const TOGGLE_MSG = {
-  shopping: ["Alındı", "Listeye geri döndü"],
   wishlist: ["Harika, aldın!", "Listeye geri döndü"],
-  growth: ["Tamamlandı, tebrikler!", "Yeniden açıldı"]
+  growth: ["Dinledin, güzel!", "Dinlenecekler listesine döndü"]
 };
-const WEEK = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 const NAV = [
   { id: "home", name: "Ana sayfa" },
@@ -55,21 +52,16 @@ const NAV = [
   { id: "recipes", name: "Tarifler", hint: "Lezzetli tarifler, favorilerin" },
   { id: "goals", name: "Hedefler", hint: "Hayallerine giden yol" },
   { id: "plans", name: "Planlar", hint: "Yapacaklarını listele" },
-  { id: "calendar", name: "Takvim", hint: "Planla, organize et" },
-  { id: "shopping", name: "Alışveriş listesi", hint: "Eksikler, ihtiyaçlar" },
-  { id: "health", name: "Sağlık ve spor", hint: "Su, spor, uyku takibi" },
-  { id: "growth", name: "Kişisel gelişim", hint: "Oku, öğren, büyü" },
+  { id: "growth", name: "Müzik önerileri", hint: "Dinle, keşfet, paylaş" },
   { id: "films", name: "Film ve dizi", hint: "İzlenecekler ve puanların" },
   { id: "favorites", name: "Favoriler", hint: "Siteler, müzikler, filmler" },
-  { id: "doodle", name: "Doodle ve ilham", hint: "Çiz, hayal et, tasarla" },
-  { id: "voice", name: "Sesli notlar", hint: "Konuş, yazıya dönüşsün" },
-  { id: "mood", name: "Duygu günlüğü", hint: "Hislerini yaz, hafifle" },
+  { id: "doodle", name: "Çizim", hint: "Çiz, hayal et, tasarla" },
+  { id: "mood", name: "Hissettiklerim", hint: "Hislerini yaz, hafifle" },
   { id: "ideas", name: "Fikir kutusu", hint: "Aklına gelen her şey" },
-  { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" },
-  { id: "countdown", name: "Geri sayımlar", hint: "Özel günler, tatiller" }
+  { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" }
 ];
-const HOME_TILES = ["health", "growth", "films", "favorites", "doodle", "voice", "mood", "ideas", "wishlist", "countdown"];
-const VIEW_IDS = ["home", "calendar", ...SECTIONS];
+const HOME_TILES = ["growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
+const VIEW_IDS = ["home", ...SECTIONS];
 const nameOf = id => (NAV.find(n => n.id === id) || {}).name || id;
 
 const ICONS = {
@@ -80,18 +72,13 @@ const ICONS = {
   recipes: '<path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/>',
   goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   plans: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>',
-  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/>',
-  shopping: '<path d="M3 4h2.5l2 11h10l2-8H6.5"/><circle cx="9" cy="19.5" r="1.2"/><circle cx="17" cy="19.5" r="1.2"/>',
-  health: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z"/>',
-  growth: '<path d="M12 21v-8"/><path d="M12 13c0-3.5-2.5-5.5-6-5.5 0 3.5 2.5 5.5 6 5.5Z"/><path d="M12 15c0-3 2-5 6-5 0 3-2 5-6 5Z"/>',
+  growth: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
   films: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
   favorites: '<path d="m12 3.5 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9Z"/>',
   doodle: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.8 2-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3Z"/><path d="M7.5 11h.01M10 7.5h.01M14.5 7.5h.01"/>',
-  voice: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>',
   mood: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.2 4.2 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
   ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
-  wishlist: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9S9 8.5 8.5 6.5 10 4 12 6c2-2 3.5-.5 3.5.5S12 9 12 9Z"/>',
-  countdown: '<path d="M7 3h10M7 21h10M8 3c0 5 4 5 4 9s-4 4-4 9M16 3c0 5-4 5-4 9s4 4 4 9"/>'
+  wishlist: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9S9 8.5 8.5 6.5 10 4 12 6c2-2 3.5-.5 3.5.5S12 9 12 9Z"/>'
 };
 const iconSvg = id => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ""}</svg>`;
 const $ = id => document.getElementById(id);
@@ -103,9 +90,12 @@ let toastTimer = null;
 let filmFilter = "all";
 let active = "home";
 let beforeSearch = "home";
-let recognizer = null;
+let profile = "burcun";
+let pad = null;
+let padDirty = false;
+let padInit = "";
+let erasing = false;
 const searchQ = {};
-const calState = { y: new Date().getFullYear(), m: new Date().getMonth(), sel: "" };
 let cloud = loadCloud();
 let pushTimer = null;
 let pushing = false;
@@ -183,32 +173,15 @@ const views = {
       { name: "note", label: "Not", type: "textarea", rows: 3 }
     ]
   },
-  shopping: {
-    add: "Ürün ekle",
-    clear: true,
-    empty: "Liste boş. Eksiklerini “Ürün ekle” ile yaz.",
-    fields: [
-      { name: "title", label: "Ne alınacak?", required: true },
-      { name: "qty", label: "Miktar", placeholder: "2 kg, 1 paket…" }
-    ]
-  },
-  health: {
-    add: "Kayıt ekle",
-    empty: "Henüz kayıt yok. Bugün yaptığın hareketi ya da içtiğin suyu “Kayıt ekle” ile yaz.",
-    fields: [
-      { name: "title", label: "Ne yaptın?", placeholder: "Yürüyüş, yoga, su içme…", required: true },
-      { name: "kind", label: "Tür", type: "select", options: ["Spor", "Yürüyüş", "Su", "Uyku", "Beslenme", "Diğer"] },
-      { name: "amount", label: "Süre ya da miktar", placeholder: "45 dk, 2 litre…" },
-      { name: "date", label: "Tarih", type: "date", default: () => todayStr() },
-      { name: "note", label: "Not", type: "textarea", rows: 3 }
-    ]
-  },
   growth: {
-    add: "Ekle",
-    empty: "Henüz bir şey yok. Okumak, öğrenmek ya da alışkanlık edinmek istediğin şeyi “Ekle” ile yaz.",
+    add: "Müzik ekle",
+    empty: "Henüz müzik önerisi yok. Duyduğun bir şarkıyı “Müzik ekle” ile kaydet.",
     fields: [
-      { name: "title", label: "Ne öğreniyorsun?", placeholder: "Kitap, kurs, alışkanlık…", required: true },
-      { name: "kind", label: "Tür", type: "select", options: ["Kitap", "Kurs", "Makale", "Alışkanlık", "Diğer"] },
+      { name: "title", label: "Şarkı / albüm adı", required: true },
+      { name: "artist", label: "Sanatçı" },
+      { name: "kind", label: "Tür", type: "select", options: ["Şarkı", "Albüm", "Sanatçı", "Çalma listesi"] },
+      { name: "by", label: "Kim önerdi?" },
+      { name: "url", label: "Bağlantı", placeholder: "https://" },
       { name: "note", label: "Not", type: "textarea", rows: 3 }
     ]
   },
@@ -223,27 +196,16 @@ const views = {
     ]
   },
   doodle: {
-    add: "İlham ekle",
-    empty: "Henüz ilham yok. Aklına takılan bir fikri, rengi ya da alıntıyı “İlham ekle” ile sakla.",
+    add: "Çizim yap",
+    empty: "Henüz çizim yok. “Çizim yap” diyip parmağınla ya da fareyle çizmeye başla.",
     fields: [
       { name: "title", label: "Başlık", required: true },
-      { name: "kind", label: "Tür", type: "select", options: ["Çizim fikri", "Renk paleti", "Alıntı", "Görsel bağlantısı", "Diğer"] },
-      { name: "color", label: "Renk", type: "color" },
-      { name: "url", label: "Bağlantı", placeholder: "https://" },
-      { name: "body", label: "Ayrıntı", type: "textarea", rows: 4 }
-    ]
-  },
-  voice: {
-    add: "Sesli not ekle",
-    empty: "Henüz sesli not yok. “Sesli not ekle” diyip konuşmaya başla, söylediklerin yazıya dönüşsün.",
-    fields: [
-      { name: "title", label: "Başlık", required: true },
-      { name: "body", label: "Not", type: "voice", rows: 8, hint: "“Konuşarak yaz” düğmesine bas, söylediklerin yazıya dökülür." }
+      { name: "img", label: "Çizim", type: "draw" }
     ]
   },
   mood: {
-    add: "Gün ekle",
-    empty: "Henüz kayıt yok. Bugün nasıl hissettiğini “Gün ekle” ile yaz.",
+    add: "Hissim ekle",
+    empty: "Henüz kayıt yok. Bugün nasıl hissettiğini “Hissim ekle” ile yaz.",
     fields: [
       { name: "title", label: "Kısa başlık", placeholder: "Bugünün özeti", required: true },
       { name: "date", label: "Tarih", type: "date", default: () => todayStr() },
@@ -271,15 +233,6 @@ const views = {
       { name: "url", label: "Bağlantı", placeholder: "https://" },
       { name: "note", label: "Not", type: "textarea", rows: 3 }
     ]
-  },
-  countdown: {
-    add: "Geri sayım ekle",
-    empty: "Henüz geri sayım yok. Özel bir günü “Geri sayım ekle” ile bekle.",
-    fields: [
-      { name: "title", label: "Ne için?", placeholder: "Doğum günü, tatil, sınav…", required: true },
-      { name: "date", label: "Tarih", type: "date", required: true },
-      { name: "note", label: "Not", type: "textarea", rows: 3 }
-    ]
   }
 };
 
@@ -304,13 +257,8 @@ function normalizeGame(g) {
   return out;
 }
 
-function levelOf(xp) {
-  return Math.floor(xp / XP_LEVEL) + 1;
-}
-
-function levelName(level) {
-  return LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)];
-}
+function levelOf(xp) { return Math.floor(xp / XP_LEVEL) + 1; }
+function levelName(level) { return LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)]; }
 
 function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -593,18 +541,10 @@ function newId() {
   return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function todayStr() {
-  return ymd(new Date());
-}
+function todayStr() { return ymd(new Date()); }
 
-function daysUntil(s) {
-  const a = new Date(s + "T00:00:00");
-  const b = new Date(todayStr() + "T00:00:00");
-  return Math.round((a - b) / 86400000);
-}
-
-function formatDate(ymd) {
-  const d = new Date(ymd + "T00:00:00");
+function formatDate(s) {
+  const d = new Date(s + "T00:00:00");
   if (isNaN(d)) return "";
   return d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
@@ -637,6 +577,19 @@ async function copy(text) {
   } catch {
     toast("Kopyalanamadı. Metni elle seçip kopyala.");
   }
+}
+
+/* ---------- Giriş ve tema ---------- */
+
+function setProfile(p) {
+  if (!PROFILES[p]) p = "burcun";
+  profile = p;
+  document.documentElement.dataset.theme = p;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = p === "dodom" ? "#050810" : "#2B1720";
+  $("login").hidden = true;
+  render();
+  window.scrollTo(0, 0);
 }
 
 /* ---------- Kart şablonları ---------- */
@@ -710,7 +663,6 @@ const templates = {
     </details>`;
   },
   notes: n => noteCard("notes", n),
-  voice: n => noteCard("voice", n),
   ideas: n => noteCard("ideas", n, tags([n.category])),
   plans: p => {
     const late = p.date && !p.done && p.date < todayStr();
@@ -718,8 +670,9 @@ const templates = {
     return taskCard("plans", p,
       `${dateText ? `<span class="plan-date ${late ? "late" : ""}">${esc(dateText)}${late ? ", tarihi geçti" : ""}</span>` : ""}${p.detail ? `<p class="plan-detail">${esc(p.detail)}</p>` : ""}`);
   },
-  shopping: s => taskCard("shopping", s, s.qty ? `<span class="plan-date">${esc(s.qty)}</span>` : ""),
-  growth: g => taskCard("growth", g, tags([g.kind]) + noteLine(g.note)),
+  growth: g => taskCard("growth", g,
+    tags([g.kind, g.artist]) + (g.by ? `<p class="film-note">Öneren: ${esc(g.by)}</p>` : "") + noteLine(g.note) +
+    (safeUrl(g.url) ? `<p class="film-note">${extLink(g.url, "Dinle")}</p>` : "")),
   wishlist: w => taskCard("wishlist", w, tags([w.priority, w.price]) + noteLine(w.note) + (safeUrl(w.url) ? `<p class="film-note">${extLink(w.url, "Bağlantıyı aç")}</p>` : "")),
   emails: e => `<article class="item email">
       <span class="item-title">${esc(e.title)}</span>
@@ -771,28 +724,18 @@ const templates = {
       ${editBtn("goals", g.id)}
     </article>`;
   },
-  health: h => `<article class="item health">
-      <div class="health-top"><span class="item-title">${esc(h.title)}</span>${h.amount ? `<strong class="health-amount">${esc(h.amount)}</strong>` : ""}</div>
-      ${tags([h.kind])}
-      ${h.date ? `<span class="plan-date">${esc(formatDate(h.date))}</span>` : ""}
-      ${noteLine(h.note)}
-      ${editBtn("health", h.id)}
-    </article>`,
   favorites: f => `<article class="item fav">
       <div class="item-head"><span class="item-title">${esc(f.title)}</span>${extLink(f.url)}</div>
       ${tags([f.kind])}
       ${noteLine(f.note)}
       ${editBtn("favorites", f.id)}
     </article>`,
-  doodle: d => {
-    const col = /^#[0-9a-f]{6}$/i.test(d.color || "") ? d.color : "#E8B4C0";
-    return `<article class="item doodle" style="--dot:${col}">
-      <div class="item-head"><span class="item-title">${esc(d.title)}</span>${extLink(d.url)}</div>
-      ${tags([d.kind])}
-      ${d.body ? `<p class="note-body">${esc(d.body)}</p>` : ""}
+  doodle: d => `<article class="item doodle">
+      <span class="item-title">${esc(d.title)}</span>
+      <p class="note-date">${esc(dateShort(d.updated || d.created))}</p>
+      ${String(d.img || "").startsWith("data:image/") ? `<img class="doodle-img" src="${esc(d.img)}" alt="${esc(d.title)}">` : ""}
       ${editBtn("doodle", d.id)}
-    </article>`;
-  },
+    </article>`,
   mood: m => {
     const parts = String(m.mood || "").split(" ");
     const emoji = parts[0] || "";
@@ -806,27 +749,10 @@ const templates = {
       ${m.gratitude ? `<p class="gratitude"><span>Güzel olan:</span> ${esc(m.gratitude)}</p>` : ""}
       ${editBtn("mood", m.id)}
     </article>`;
-  },
-  countdown: c => {
-    const n = c.date ? daysUntil(c.date) : null;
-    let big = "—";
-    let small = "";
-    if (n === 0) big = "Bugün";
-    else if (n > 0) { big = String(n); small = "gün kaldı"; }
-    else if (n < 0) { big = String(-n); small = "gün geçti"; }
-    return `<article class="item count ${n !== null && n < 0 ? "past" : ""}">
-      <div class="count-num"><strong>${esc(big)}</strong><span>${small}</span></div>
-      <div>
-        <span class="item-title">${esc(c.title)}</span>
-        ${c.date ? `<span class="plan-date">${esc(formatDate(c.date))}</span>` : ""}
-        ${noteLine(c.note)}
-      </div>
-      ${editBtn("countdown", c.id)}
-    </article>`;
   }
 };
 
-const SKIP_KEYS = ["id", "password", "created", "updated", "done", "watched", "rating", "progress", "target", "doneAt", "color"];
+const SKIP_KEYS = ["id", "password", "created", "updated", "done", "watched", "rating", "progress", "target", "doneAt", "img"];
 
 function matches(item, q) {
   if (!q) return true;
@@ -838,25 +764,19 @@ function matches(item, q) {
     .includes(q);
 }
 
+const goalDone = x => (Number(x.progress) || 0) >= Math.max(1, Number(x.target) || 1);
+const goalPct = g => Math.round((Math.min(Number(g.progress) || 0, Math.max(1, Number(g.target) || 1)) / Math.max(1, Number(g.target) || 1)) * 100);
+
 function sorted(sec, items) {
   const list = [...items];
   const byTitle = (a, b) => String(a.title).localeCompare(String(b.title), "tr");
   const doneLast = (a, b) => (!!a.done !== !!b.done ? (a.done ? 1 : -1) : 0);
   const byDateDesc = (a, b) => (b.date || "").localeCompare(a.date || "") || (b.created || 0) - (a.created || 0);
-  if (sec === "notes" || sec === "voice" || sec === "ideas") return list.sort((a, b) => (b.updated || 0) - (a.updated || 0));
-  if (sec === "health" || sec === "mood") return list.sort(byDateDesc);
-  if (sec === "shopping") return list.sort((a, b) => doneLast(a, b) || (a.created || 0) - (b.created || 0));
+  if (sec === "notes" || sec === "ideas" || sec === "doodle") return list.sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  if (sec === "mood") return list.sort(byDateDesc);
   if (sec === "growth") return list.sort((a, b) => doneLast(a, b) || byTitle(a, b));
   if (sec === "wishlist") {
     return list.sort((a, b) => doneLast(a, b) || PRIORITY.indexOf(a.priority) - PRIORITY.indexOf(b.priority) || byTitle(a, b));
-  }
-  if (sec === "countdown") {
-    const key = c => {
-      if (!c.date) return 1e9;
-      const n = daysUntil(c.date);
-      return n >= 0 ? n : 1e6 - n;
-    };
-    return list.sort((a, b) => key(a) - key(b));
   }
   if (sec === "plans") {
     return list.sort((a, b) => {
@@ -879,12 +799,9 @@ function sorted(sec, items) {
   return list.sort(byTitle);
 }
 
-const goalDone = x => (Number(x.progress) || 0) >= Math.max(1, Number(x.target) || 1);
-const goalPct = g => Math.round((Math.min(Number(g.progress) || 0, Math.max(1, Number(g.target) || 1)) / Math.max(1, Number(g.target) || 1)) * 100);
-
 function openCountOf(sec) {
   const d = data[sec];
-  if (["plans", "shopping", "growth", "wishlist"].includes(sec)) return d.filter(x => !x.done).length;
+  if (["plans", "growth", "wishlist"].includes(sec)) return d.filter(x => !x.done).length;
   if (sec === "films") return d.filter(f => !f.watched).length;
   if (sec === "goals") return d.filter(x => !goalDone(x)).length;
   return d.length;
@@ -902,25 +819,16 @@ function subtitle(sec) {
   switch (sec) {
     case "accounts": return `${total} hesap`;
     case "recipes": return `${total} tarif`;
-    case "notes": case "voice": return `${total} not`;
+    case "notes": return `${total} not`;
     case "emails": return `${total} adres`;
     case "ideas": return `${total} fikir`;
     case "favorites": return `${total} favori`;
-    case "doodle": return `${total} ilham`;
+    case "doodle": return `${total} çizim`;
     case "mood": return `${total} gün`;
     case "plans": return open ? `${open} bekleyen plan` : "Hepsi tamam";
-    case "shopping": return open ? `${open} ürün alınacak` : "Liste tamam";
-    case "growth": return open ? `${open} devam eden` : "Hepsi tamam";
+    case "growth": return open ? `${open} dinlenecek` : "Hepsi dinlendi";
     case "wishlist": return open ? `${open} istek` : "Hepsi tamam";
     case "films": return open ? `${open} izlenecek` : "Hepsi izlendi";
-    case "health": {
-      const n = data.health.filter(h => h.date && daysUntil(h.date) >= -6 && daysUntil(h.date) <= 0).length;
-      return `${n} kayıt bu hafta`;
-    }
-    case "countdown": {
-      const n = data.countdown.filter(c => c.date && daysUntil(c.date) >= 0).length;
-      return n ? `${n} yaklaşan` : "Hepsi geçti";
-    }
     default: return "";
   }
 }
@@ -944,7 +852,6 @@ function buildViews() {
         </div>`
       : "";
     const game = sec === "goals" ? `<div class="game" id="game"></div>` : "";
-    const clear = v.clear ? `<button class="btn" data-clear="${sec}" type="button">Alınanları temizle</button>` : "";
     return `<section class="view" data-sec="${sec}" hidden>
       <header class="view-head">
         <div class="view-title">
@@ -953,7 +860,6 @@ function buildViews() {
         </div>
         <div class="view-tools">
           <input type="search" data-search="${sec}" placeholder="Ara" aria-label="${esc(nameOf(sec))} içinde ara">
-          ${clear}
           <button class="btn primary" data-add="${sec}" type="button">${esc(v.add)}</button>
         </div>
       </header>
@@ -1028,21 +934,6 @@ function renderHome() {
     <button class="link-btn" type="button" data-open="goals">Tüm hedefler →</button>
   </section>`;
 
-  const now = new Date();
-  const monthTitle = now.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
-  const calCard = `<section class="card plain" data-tone="calendar">
-    <header class="card-head"><span class="card-icon">${iconSvg("calendar")}</span><h3 style="text-transform:capitalize">${esc(monthTitle)}</h3></header>
-    ${monthGrid(now.getFullYear(), now.getMonth(), true)}
-    <button class="link-btn" type="button" data-open="calendar">Tüm etkinlikler →</button>
-  </section>`;
-
-  const shop = sorted("shopping", data.shopping).filter(x => !x.done).slice(0, 6);
-  const shopCard = `<section class="card plain" data-tone="shopping">
-    <header class="card-head"><span class="card-icon">${iconSvg("shopping")}</span><h3>Alışveriş listesi</h3><button class="icon-btn" type="button" data-add="shopping" aria-label="Ürün ekle">+</button></header>
-    ${shop.length ? checkList("shopping", shop) : `<p class="mini-empty">Liste boş, alınacak bir şey yok.</p>`}
-    <button class="link-btn" type="button" data-open="shopping">Tüm liste →</button>
-  </section>`;
-
   const todayMood = data.mood.find(m => m.date === today);
   const moodCard = `<section class="card" data-tone="mood">
     <header class="card-head"><span class="card-icon">${iconSvg("mood")}</span><h3>Bugün nasıl hissediyorsun?</h3></header>
@@ -1051,7 +942,7 @@ function renderHome() {
       const label = rest.join(" ");
       return `<button type="button" class="mood-btn ${todayMood && todayMood.mood === m ? "on" : ""}" data-action="quickmood" data-val="${esc(m)}" title="${esc(label)}" aria-label="${esc(label)}">${emoji}</button>`;
     }).join("")}</div>
-    <button class="link-btn" type="button" data-open="mood">Duygu günlüğüne git →</button>
+    <button class="link-btn" type="button" data-open="mood">Hissettiklerime git →</button>
   </section>`;
 
   const quoteCard = `<section class="card quote-card"><p class="script">${esc(quoteOf(3))}</p></section>`;
@@ -1070,7 +961,7 @@ function renderHome() {
     <div class="top-row">
       <div class="hero">
         <div>
-          <h1>${greeting()} ${esc(OWNER)} <span class="heart" aria-hidden="true">♡</span></h1>
+          <h1>${greeting()} ${esc(PROFILES[profile])} <span class="heart" aria-hidden="true">♡</span></h1>
           <p class="hero-sub">Bugün harika şeyler başarabilirsin.</p>
         </div>
         <p class="hero-quote">${esc(quoteOf(0))}</p>
@@ -1079,8 +970,7 @@ function renderHome() {
       ${planCard}
     </div>
     <div class="cards four">${["notes", "emails", "accounts", "recipes"].map(miniCard).join("")}</div>
-    <div class="cards three">${goalCard}${calCard}${shopCard}</div>
-    <div class="cards two">${moodCard}${quoteCard}</div>
+    <div class="cards three">${goalCard}${moodCard}${quoteCard}</div>
     <h3 class="section-title">Daha fazlası için</h3>
     <div class="tiles">${tiles}</div>`;
 }
@@ -1098,74 +988,6 @@ function quickMood(val) {
   save();
   render();
   toast("Günlüğüne eklendi");
-}
-
-/* ---------- Takvim ---------- */
-
-function eventMap() {
-  const map = {};
-  const add = d => { if (d) map[d] = (map[d] || 0) + 1; };
-  data.plans.forEach(p => add(p.date));
-  data.countdown.forEach(c => add(c.date));
-  data.goals.forEach(g => add(g.deadline));
-  return map;
-}
-
-function eventsOn(day) {
-  const ev = [];
-  data.plans.forEach(p => { if (p.date === day) ev.push({ sec: "plans", title: p.title, done: !!p.done }); });
-  data.countdown.forEach(c => { if (c.date === day) ev.push({ sec: "countdown", title: c.title }); });
-  data.goals.forEach(g => { if (g.deadline === day) ev.push({ sec: "goals", title: g.title + " (son tarih)", done: goalDone(g) }); });
-  return ev;
-}
-
-function monthGrid(y, m, compact) {
-  const map = eventMap();
-  const today = todayStr();
-  const offset = (new Date(y, m, 1).getDay() + 6) % 7;
-  const count = new Date(y, m + 1, 0).getDate();
-  let cells = WEEK.map(w => `<span class="cal-h">${w}</span>`).join("");
-  cells += "<span></span>".repeat(offset);
-  for (let d = 1; d <= count; d++) {
-    const s = ymd(new Date(y, m, d));
-    const cls = ["cal-d", s === today ? "today" : "", map[s] ? "has" : "", !compact && s === calState.sel ? "sel" : ""].filter(Boolean).join(" ");
-    cells += compact
-      ? `<span class="${cls}">${d}</span>`
-      : `<button type="button" class="${cls}" data-day="${s}" aria-label="${esc(formatDate(s))}">${d}</button>`;
-  }
-  return `<div class="cal-grid">${cells}</div>`;
-}
-
-function renderCalendar() {
-  if (!calState.sel) calState.sel = todayStr();
-  const { y, m, sel } = calState;
-  const title = new Date(y, m, 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
-  const ev = eventsOn(sel);
-  $("calendar").innerHTML = `
-    <header class="view-head">
-      <div class="view-title">
-        <span class="view-icon" aria-hidden="true">${iconSvg("calendar")}</span>
-        <div><h2>Takvim</h2><p class="view-sub">Planların, geri sayımların ve hedef tarihlerin burada</p></div>
-      </div>
-      <div class="view-tools"><button class="btn primary" type="button" data-addplan="${sel}">Bu güne plan ekle</button></div>
-    </header>
-    <div class="cal-layout">
-      <section class="card plain">
-        <div class="cal-nav">
-          <button class="icon-btn" type="button" data-cal="prev" aria-label="Önceki ay">‹</button>
-          <h3>${esc(title)}</h3>
-          <button class="icon-btn" type="button" data-cal="next" aria-label="Sonraki ay">›</button>
-        </div>
-        ${monthGrid(y, m, false)}
-        <button class="link-btn" type="button" data-cal="today">Bugüne dön</button>
-      </section>
-      <section class="card plain day-card">
-        <h3>${esc(formatDate(sel))}</h3>
-        ${ev.length
-          ? `<ul class="event-list">${ev.map(e => `<li><button type="button" class="event ${e.done ? "done" : ""}" data-tone="${e.sec}" data-open="${e.sec}"><span>${esc(e.title)}</span><em>${esc(nameOf(e.sec))}</em></button></li>`).join("")}</ul>`
-          : `<p class="mini-empty">Bu gün için kayıt yok.</p>`}
-      </section>
-    </div>`;
 }
 
 /* ---------- Genel arama ---------- */
@@ -1200,8 +1022,52 @@ function render() {
   SECTIONS.forEach(sec => renderSection(sec));
   renderGame();
   renderHome();
-  renderCalendar();
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
+}
+
+/* ---------- Çizim tahtası ---------- */
+
+function initPad(src) {
+  const c = $("pad");
+  if (!c) { pad = null; return; }
+  pad = c;
+  padDirty = false;
+  padInit = src || "";
+  erasing = false;
+  const x = c.getContext("2d");
+  x.fillStyle = "#FFFFFF";
+  x.fillRect(0, 0, c.width, c.height);
+  if (String(src).startsWith("data:image/")) {
+    const im = new Image();
+    im.onload = () => x.drawImage(im, 0, 0, c.width, c.height);
+    im.src = src;
+  }
+  let down = false;
+  const pos = e => {
+    const r = c.getBoundingClientRect();
+    return [(e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height];
+  };
+  c.onpointerdown = e => {
+    down = true;
+    padDirty = true;
+    c.setPointerCapture(e.pointerId);
+    x.lineCap = "round";
+    x.lineJoin = "round";
+    x.strokeStyle = erasing ? "#FFFFFF" : $("penColor").value;
+    x.lineWidth = Number($("penSize").value) * (erasing ? 3 : 1);
+    const [a, b] = pos(e);
+    x.beginPath();
+    x.moveTo(a, b);
+    x.lineTo(a + 0.1, b);
+    x.stroke();
+  };
+  c.onpointermove = e => {
+    if (!down) return;
+    const [a, b] = pos(e);
+    x.lineTo(a, b);
+    x.stroke();
+  };
+  c.onpointerup = c.onpointercancel = () => { down = false; };
 }
 
 /* ---------- Düzenleyici ---------- */
@@ -1214,14 +1080,15 @@ function fieldHtml(f, value) {
   if (f.type === "textarea") {
     return `<label for="${id}">${esc(f.label)}</label>${hint}<textarea id="${id}" name="${f.name}" rows="${f.rows || 4}"${ph}>${esc(value)}</textarea>`;
   }
-  if (f.type === "voice") {
-    return `<label for="${id}">${esc(f.label)}</label>${hint}
-      <textarea id="${id}" name="${f.name}" rows="${f.rows || 6}"${ph}>${esc(value)}</textarea>
-      <div class="voice-row"><button type="button" class="btn small" data-voice="${id}">Konuşarak yaz</button><span class="voice-state" id="voiceState"></span></div>`;
-  }
-  if (f.type === "color") {
-    const v = /^#[0-9a-f]{6}$/i.test(value) ? value : "#E8B4C0";
-    return `<label for="${id}">${esc(f.label)}</label><input id="${id}" name="${f.name}" type="color" class="color-input" value="${esc(v)}">`;
+  if (f.type === "draw") {
+    return `<label>${esc(f.label)}</label>
+      <canvas id="pad" class="pad" width="640" height="420" aria-label="Çizim alanı"></canvas>
+      <div class="pad-tools">
+        <input id="penColor" type="color" class="color-input" value="#6B2D45" aria-label="Renk">
+        <input id="penSize" type="range" min="1" max="24" value="4" aria-label="Kalem kalınlığı">
+        <button type="button" class="btn small" data-pad="erase" aria-pressed="false">Silgi</button>
+        <button type="button" class="btn small" data-pad="clear">Temizle</button>
+      </div>`;
   }
   if (f.type === "password") {
     return `<label for="${id}">${esc(f.label)}</label>
@@ -1245,6 +1112,7 @@ function fieldHtml(f, value) {
 function openEditor(sec, item, preset) {
   current = sec;
   editingId = item ? item.id : null;
+  pad = null;
   $("editorTitle").textContent = item ? "Düzenle" : views[sec].add;
   $("fields").innerHTML = views[sec].fields.map(f => {
     let v = "";
@@ -1255,53 +1123,20 @@ function openEditor(sec, item, preset) {
   }).join("");
   $("deleteBtn").hidden = !item;
   $("editor").showModal();
+  const drawField = views[sec].fields.find(f => f.type === "draw");
+  if (drawField) initPad(item ? item[drawField.name] : "");
   const first = $("fields").querySelector("input, textarea, select");
   if (first) first.focus();
-}
-
-function toggleVoice(btn) {
-  const state = $("voiceState");
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    state.textContent = "Bu tarayıcı sesle yazmayı desteklemiyor. Chrome ya da Safari dene.";
-    return;
-  }
-  if (recognizer) {
-    recognizer.stop();
-    return;
-  }
-  const area = $(btn.dataset.voice);
-  const r = new SR();
-  let failed = false;
-  r.lang = "tr-TR";
-  r.continuous = true;
-  r.interimResults = false;
-  r.onresult = ev => {
-    let text = "";
-    for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) text += ev.results[i][0].transcript + " ";
-    }
-    text = text.trim();
-    if (text) area.value = (area.value.trim() ? area.value.trim() + " " : "") + text;
-  };
-  r.onerror = () => {
-    failed = true;
-    state.textContent = "Mikrofona erişilemedi. Tarayıcı iznini kontrol et.";
-  };
-  r.onend = () => {
-    recognizer = null;
-    btn.textContent = "Konuşarak yaz";
-    if (!failed) state.textContent = "";
-  };
-  recognizer = r;
-  btn.textContent = "Durdur";
-  state.textContent = "Dinliyorum…";
-  r.start();
 }
 
 /* ---------- Olaylar ---------- */
 
 document.addEventListener("click", e => {
+  const prof = e.target.closest("[data-profile]");
+  if (prof) {
+    setProfile(prof.dataset.profile);
+    return;
+  }
   const open = e.target.closest("[data-open]");
   if (open) {
     openView(open.dataset.open, true);
@@ -1312,52 +1147,10 @@ document.addEventListener("click", e => {
     openEditor(add.dataset.add, null);
     return;
   }
-  const addPlan = e.target.closest("[data-addplan]");
-  if (addPlan) {
-    openEditor("plans", null, { date: addPlan.dataset.addplan });
-    return;
-  }
-  const day = e.target.closest("[data-day]");
-  if (day) {
-    calState.sel = day.dataset.day;
-    renderCalendar();
-    return;
-  }
-  const cal = e.target.closest("[data-cal]");
-  if (cal) {
-    const dir = cal.dataset.cal;
-    if (dir === "today") {
-      const n = new Date();
-      calState.y = n.getFullYear();
-      calState.m = n.getMonth();
-      calState.sel = todayStr();
-    } else {
-      calState.m += dir === "next" ? 1 : -1;
-      if (calState.m < 0) { calState.m = 11; calState.y--; }
-      if (calState.m > 11) { calState.m = 0; calState.y++; }
-    }
-    renderCalendar();
-    return;
-  }
   const filter = e.target.closest("[data-filter]");
   if (filter) {
     filmFilter = filter.dataset.filter;
     render();
-    return;
-  }
-  const clear = e.target.closest("[data-clear]");
-  if (clear) {
-    const sec = clear.dataset.clear;
-    const n = data[sec].filter(x => x.done).length;
-    if (!n) {
-      toast("Alınmış ürün yok");
-      return;
-    }
-    if (!confirm(`${n} ürün listeden silinecek. Emin misin?`)) return;
-    data[sec] = data[sec].filter(x => !x.done);
-    save();
-    render();
-    toast("Temizlendi");
   }
 });
 
@@ -1381,12 +1174,15 @@ $("gsearch").addEventListener("input", e => {
 
 $("menuBtn").addEventListener("click", () => document.body.classList.toggle("nav-open"));
 $("scrim").addEventListener("click", () => document.body.classList.remove("nav-open"));
+$("switchBtn").addEventListener("click", () => {
+  document.body.classList.remove("nav-open");
+  $("login").hidden = false;
+});
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") document.body.classList.remove("nav-open");
 });
 
 $("cancelBtn").addEventListener("click", () => $("editor").close());
-$("editor").addEventListener("close", () => { if (recognizer) recognizer.stop(); });
 
 document.querySelector(".panel").addEventListener("click", e => {
   const b = e.target.closest("[data-action]");
@@ -1435,9 +1231,18 @@ document.querySelector(".panel").addEventListener("click", e => {
 });
 
 $("fields").addEventListener("click", e => {
-  const v = e.target.closest("[data-voice]");
-  if (v) {
-    toggleVoice(v);
+  const p = e.target.closest("[data-pad]");
+  if (p && pad) {
+    if (p.dataset.pad === "clear") {
+      const x = pad.getContext("2d");
+      x.fillStyle = "#FFFFFF";
+      x.fillRect(0, 0, pad.width, pad.height);
+      padDirty = true;
+    } else {
+      erasing = !erasing;
+      p.setAttribute("aria-pressed", String(erasing));
+      p.classList.toggle("primary", erasing);
+    }
     return;
   }
   const b = e.target.closest("[data-pw]");
@@ -1462,6 +1267,10 @@ $("editorForm").addEventListener("submit", e => {
   const fd = new FormData(e.target);
   const values = {};
   views[current].fields.forEach(f => {
+    if (f.type === "draw") {
+      values[f.name] = pad && padDirty ? pad.toDataURL("image/png") : padInit;
+      return;
+    }
     const v = String(fd.get(f.name) || "");
     values[f.name] = f.type === "password" ? v : v.trim();
   });
@@ -1477,14 +1286,12 @@ $("editorForm").addEventListener("submit", e => {
   } else {
     const extras = {
       plans: { done: false },
-      shopping: { done: false },
       growth: { done: false },
       wishlist: { done: false },
       films: { watched: false, rating: 0 },
       goals: { progress: 0 }
     };
-    const extra = extras[current] || {};
-    data[current].push({ id: newId(), created: now, updated: now, ...extra, ...values });
+    data[current].push({ id: newId(), created: now, updated: now, ...(extras[current] || {}), ...values });
   }
   save();
   $("editor").close();
@@ -1525,7 +1332,6 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- Başlangıç ---------- */
 
-$("brandName").textContent = OWNER;
 data = load();
 buildNav();
 buildViews();
