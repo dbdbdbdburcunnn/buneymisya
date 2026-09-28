@@ -4,124 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2B1720">
 <title>Defterim</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="shell">
-  <aside class="side">
-    <div class="brand">Defterim</div>
-    <p class="today" id="today"></p>
-    <nav class="tiles" aria-label="Bölümler">
-      <button class="tile" data-open="accounts" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Hesaplar</span><span class="tile-sub" id="s-accounts"></span></span>
-      </button>
-      <button class="tile" data-open="recipes" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Tarifler</span><span class="tile-sub" id="s-recipes"></span></span>
-      </button>
-      <button class="tile" data-open="notes" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Notlar</span><span class="tile-sub" id="s-notes"></span></span>
-      </button>
-      <button class="tile" data-open="plans" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Planlar</span><span class="tile-sub" id="s-plans"></span></span>
-      </button>
-      <button class="tile" data-open="films" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Film ve dizi</span><span class="tile-sub" id="s-films"></span></span>
-      </button>
-      <button class="tile" data-open="goals" type="button">
-        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
-        <span class="tile-text"><span class="tile-name">Hedefler</span><span class="tile-sub" id="s-goals"></span></span>
-      </button>
-    </nav>
+  <aside class="side" id="side" aria-label="Menü">
+    <div class="brand"><span id="brandName">Neri</span> <span class="heart" aria-hidden="true">♡</span></div>
+    <nav class="nav" id="nav" aria-label="Bölümler"></nav>
+    <p class="side-quote">Daha iyi bir sen,<br>her gün mümkün. <span class="heart" aria-hidden="true">♡</span></p>
   </aside>
+  <div class="scrim" id="scrim"></div>
 
   <main class="panel">
-    <section class="view" data-sec="accounts" hidden>
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" type="button" aria-label="Menüyü aç">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <label class="gsearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+        <input type="search" id="gsearch" placeholder="Aradığın her şey burada…" aria-label="Her yerde ara" autocomplete="off">
+      </label>
+      <div class="clock"><span id="today"></span><span id="time"></span></div>
+    </header>
+
+    <section class="view" data-sec="home" id="home"></section>
+
+    <section class="view" data-sec="search" id="searchView" hidden>
       <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Hesaplar</h2>
-        <div class="view-tools">
-          <input type="search" data-search="accounts" placeholder="Hesaplarda ara" aria-label="Hesaplarda ara">
-          <button class="btn primary" data-add="accounts" type="button">Hesap ekle</button>
+        <div class="view-title">
+          <div><h2>Arama sonuçları</h2><p class="view-sub" id="searchSub"></p></div>
         </div>
       </header>
-      <div class="grid" id="list-accounts"></div>
+      <div class="stack" id="searchList"></div>
     </section>
 
-    <section class="view" data-sec="recipes" hidden>
-      <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Tarifler</h2>
-        <div class="view-tools">
-          <input type="search" data-search="recipes" placeholder="Tariflerde ara" aria-label="Tariflerde ara">
-          <button class="btn primary" data-add="recipes" type="button">Tarif ekle</button>
-        </div>
-      </header>
-      <div class="stack" id="list-recipes"></div>
-    </section>
+    <section class="view" data-sec="calendar" id="calendar" hidden></section>
 
-    <section class="view" data-sec="notes" hidden>
-      <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Notlar</h2>
-        <div class="view-tools">
-          <input type="search" data-search="notes" placeholder="Notlarda ara" aria-label="Notlarda ara">
-          <button class="btn primary" data-add="notes" type="button">Not ekle</button>
-        </div>
-      </header>
-      <div class="grid" id="list-notes"></div>
-    </section>
-
-    <section class="view" data-sec="plans" hidden>
-      <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Planlar</h2>
-        <div class="view-tools">
-          <input type="search" data-search="plans" placeholder="Planlarda ara" aria-label="Planlarda ara">
-          <button class="btn primary" data-add="plans" type="button">Plan ekle</button>
-        </div>
-      </header>
-      <div class="stack" id="list-plans"></div>
-    </section>
-
-    <section class="view" data-sec="films" hidden>
-      <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Film ve dizi</h2>
-        <div class="view-tools">
-          <input type="search" data-search="films" placeholder="Önerilerde ara" aria-label="Önerilerde ara">
-          <button class="btn primary" data-add="films" type="button">Öneri ekle</button>
-        </div>
-      </header>
-      <div class="filters" id="filmFilters" role="group" aria-label="Filtre">
-        <button type="button" class="chip" data-filter="all">Hepsi</button>
-        <button type="button" class="chip" data-filter="todo">İzlenecekler</button>
-        <button type="button" class="chip" data-filter="done">İzlediklerimiz</button>
-      </div>
-      <div class="grid" id="list-films"></div>
-    </section>
-
-    <section class="view" data-sec="goals" hidden>
-      <header class="view-head">
-        <button class="back" type="button">Bölümler</button>
-        <h2>Hedefler</h2>
-        <div class="view-tools">
-          <input type="search" data-search="goals" placeholder="Hedeflerde ara" aria-label="Hedeflerde ara">
-          <button class="btn primary" data-add="goals" type="button">Hedef ekle</button>
-        </div>
-      </header>
-      <div class="game" id="game"></div>
-      <div class="grid" id="list-goals"></div>
-    </section>
+    <div id="views"></div>
   </main>
 </div>
 
