@@ -21,6 +21,15 @@ const STACKS = ["recipes", "plans", "growth", "wishlist"];
 const MOODS = ["😊 Harika", "🙂 İyi", "😐 Fena değil", "😔 Üzgün", "😣 Stresli"];
 const SALE = ["Sadece bende", "Satılık", "Satıldı"];
 const PRIORITY = ["Çok istiyorum", "İstiyorum", "Belki"];
+const FAV_KINDS = [
+  { k: "Müzik", add: "Müzik ekle", link: "Dinle" },
+  { k: "Film / dizi", add: "Film / dizi ekle", link: "İzle" },
+  { k: "Site", add: "Site ekle", link: "Siteyi aç" },
+  { k: "Yemek", add: "Yemek ekle", link: "Aç" },
+  { k: "Kitap", add: "Kitap ekle", link: "Aç" },
+  { k: "Mekan", add: "Mekan ekle", link: "Konumu aç" },
+  { k: "Diğer", add: "Diğer ekle", link: "Aç" }
+];
 const QUOTES = [
   "Küçük adımlar, büyük hayallere götürür.",
   "Hayaller planlarla gerçekleşir.",
@@ -89,6 +98,7 @@ let pendingProfile = null;
 let accountsUnlocked = false;
 let failCount = 0;
 let saleFilter = "all";
+let favFilter = "all";
 const searchQ = {};
 let cloud = loadCloud();
 let pushTimer = null;
@@ -173,7 +183,7 @@ const views = {
     empty: "Henüz favori yok. Sevdiğin site, şarkı ya da yemeği “Favori ekle” ile kaydet.",
     fields: [
       { name: "title", label: "Adı", required: true },
-      { name: "kind", label: "Tür", type: "select", options: ["Site", "Müzik", "Film / dizi", "Yemek", "Diğer"] },
+      { name: "kind", label: "Tür", type: "select", options: FAV_KINDS.map(x => x.k) },
       { name: "url", label: "Bağlantı", placeholder: "https://" },
       { name: "note", label: "Not", type: "textarea", rows: 3 }
     ]
@@ -1767,7 +1777,7 @@ const templates = {
     </article>`;
   },
   favorites: f => `<article class="item fav">
-      <div class="item-head"><span class="item-title">${esc(f.title)}</span>${extLink(f.url)}</div>
+      <div class="item-head"><span class="item-title">${esc(f.title)}</span>${extLink(f.url, (FAV_KINDS.find(x => x.k === f.kind) || { link: "Aç" }).link)}</div>
       ${tags([f.kind])}
       ${noteLine(f.note)}
       ${authorLine(f)}
@@ -1900,6 +1910,10 @@ function buildViews() {
           <button type="button" class="chip" data-sfilter="Satıldı">Satıldı</button>
         </div>`
       : "";
+    const favs = sec === "favorites"
+      ? `<div class="fav-adds" role="group" aria-label="Favori ekle">${FAV_KINDS.map(x => `<button type="button" class="btn small" data-add="favorites" data-kind="${esc(x.k)}">+ ${esc(x.add)}</button>`).join("")}</div>
+        <div class="filters" id="favFilters" role="group" aria-label="Filtre"></div>`
+      : "";
     return `<section class="view" data-sec="${sec}" hidden>
       <header class="view-head">
         <div class="view-title">
@@ -1911,7 +1925,7 @@ function buildViews() {
           <button class="btn primary" data-add="${sec}" type="button">${esc(v.add)}</button>
         </div>
       </header>
-      ${filters}${sfilters}
+      ${filters}${sfilters}${favs}
       <div class="${STACKS.includes(sec) ? "stack" : "grid"}" id="list-${sec}"></div>
     </section>`;
   }).join("");
@@ -1922,6 +1936,17 @@ function renderSection(sec) {
   let pool = data[sec].filter(i => matches(i, q));
   if (sec === "films" && filmFilter !== "all") pool = pool.filter(f => (filmFilter === "done") === !!f.watched);
   if (sec === "doodle" && saleFilter !== "all") pool = pool.filter(x => x.sale === saleFilter);
+  if (sec === "favorites") {
+    const counts = {};
+    data.favorites.forEach(x => { counts[x.kind] = (counts[x.kind] || 0) + 1; });
+    const kinds = FAV_KINDS.filter(x => counts[x.k]);
+    if (favFilter !== "all" && !counts[favFilter]) favFilter = "all";
+    $("favFilters").innerHTML = kinds.length > 1
+      ? [`<button type="button" class="chip" data-ffilter="all" aria-pressed="${favFilter === "all"}">Hepsi</button>`]
+        .concat(kinds.map(x => `<button type="button" class="chip" data-ffilter="${esc(x.k)}" aria-pressed="${favFilter === x.k}">${esc(x.k)} (${counts[x.k]})</button>`)).join("")
+      : "";
+    if (favFilter !== "all") pool = pool.filter(x => x.kind === favFilter);
+  }
   const items = sorted(sec, pool);
   $("s-" + sec).textContent = subtitle(sec);
   $("list-" + sec).innerHTML = items.length
@@ -2144,7 +2169,8 @@ function openEditor(sec, item, preset) {
   current = sec;
   editingId = item ? item.id : null;
   imgVal = "";
-  $("editorTitle").textContent = item ? "Düzenle" : views[sec].add;
+  const presetKind = !item && preset && FAV_KINDS.find(x => x.k === preset.kind);
+  $("editorTitle").textContent = item ? "Düzenle" : presetKind ? presetKind.add : views[sec].add;
   $("fields").innerHTML = views[sec].fields.map(f => {
     let v = "";
     if (item) v = item[f.name] || "";
@@ -2203,7 +2229,13 @@ document.addEventListener("click", e => {
   }
   const add = e.target.closest("[data-add]");
   if (add) {
-    openEditor(add.dataset.add, null);
+    openEditor(add.dataset.add, null, add.dataset.kind ? { kind: add.dataset.kind } : null);
+    return;
+  }
+  const ff = e.target.closest("[data-ffilter]");
+  if (ff) {
+    favFilter = ff.dataset.ffilter;
+    renderSection("favorites");
     return;
   }
   const sf = e.target.closest("[data-sfilter]");
