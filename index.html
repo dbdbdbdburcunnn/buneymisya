@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="burcun">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,14 +10,27 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style-ek.css">
 </head>
 <body>
 
+<div class="login" id="login">
+  <div class="login-box">
+    <div class="login-heart" aria-hidden="true">♡</div>
+    <h1>Kim giriyor?</h1>
+    <div class="login-btns">
+      <button type="button" class="login-btn burcun" data-profile="burcun">Burcun</button>
+      <button type="button" class="login-btn dodom" data-profile="dodom">Dodom</button>
+    </div>
+  </div>
+</div>
+
 <div class="shell">
   <aside class="side" id="side" aria-label="Menü">
-    <div class="brand"><span id="brandName">Neri</span> <span class="heart" aria-hidden="true">♡</span></div>
+    <div class="brand"><span class="heart" aria-hidden="true">♡</span></div>
     <nav class="nav" id="nav" aria-label="Bölümler"></nav>
     <p class="side-quote">Daha iyi bir sen,<br>her gün mümkün. <span class="heart" aria-hidden="true">♡</span></p>
+    <button type="button" class="side-switch" id="switchBtn">Hesap değiştir</button>
   </aside>
   <div class="scrim" id="scrim"></div>
 
@@ -43,8 +56,6 @@
       </header>
       <div class="stack" id="searchList"></div>
     </section>
-
-    <section class="view" data-sec="calendar" id="calendar" hidden></section>
 
     <div id="views"></div>
   </main>
