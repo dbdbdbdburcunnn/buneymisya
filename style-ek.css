@@ -94,3 +94,13 @@
 :root[data-theme="dodom"] .goal-done { color: var(--gold); }
 :root[data-theme="dodom"] .quote-card .script { color: #C7D4FF; }
 :root[data-theme="dodom"] .btn:hover { border-color: var(--c); }
+
+/* Giriş şifre adımı */
+.login-form { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+.login-who { margin: 0; font-size: 1.05rem; }
+.login-pw { width: min(18rem, 80vw); padding: 0.8rem 1rem; border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 999px; background: rgba(0, 0, 0, 0.35); color: #FFFFFF; text-align: center; font-size: 1.1rem; }
+.login-pw:focus { border-color: #FFFFFF; outline: none; }
+.login-err { min-height: 1.4rem; margin: 0; color: #FFB3B3; font-size: 0.92rem; }
+.login-btn.small { min-width: 6.5rem; padding: 0.6rem 1.2rem; font-size: 1rem; background: rgba(0, 0, 0, 0.35); }
+.login-btn.go { background: #FFFFFF; color: #2B1720; }
+.login-btn:disabled { opacity: 0.5; cursor: default; }
