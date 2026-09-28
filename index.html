@@ -101,6 +101,22 @@
   </form>
 </dialog>
 
+<dialog id="lockBox" class="confirm">
+  <form id="lockForm" autocomplete="off">
+    <div class="confirm-icon lock-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h3>Şifreler kilitli</h3>
+    <p class="confirm-text">Devam etmek için şifreyi yaz.</p>
+    <input type="password" id="lockPw" class="lock-pw" aria-label="Şifre" autocomplete="off">
+    <p class="login-err lock-err" id="lockErr" role="alert"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn" id="lockCancel">Vazgeç</button>
+      <button type="submit" class="btn primary" id="lockGo">Aç</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
