@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Defterim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Young+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="lock" class="lock">
+  <div class="lock-box">
+    <h1 class="brand">Defterim</h1>
+    <p id="lockText" class="lock-text"></p>
+    <form id="lockForm" autocomplete="on">
+      <label for="master">Ana şifre</label>
+      <input id="master" type="password" required>
+      <div id="confirmWrap" hidden>
+        <label for="master2">Ana şifre (tekrar)</label>
+        <input id="master2" type="password" autocomplete="new-password">
+      </div>
+      <p id="lockError" class="error" role="alert"></p>
+      <button type="submit" id="lockBtn" class="btn primary"></button>
+    </form>
+    <button id="importFromLock" class="link-btn" type="button">Yedekten geri yükle</button>
+  </div>
+</section>
+
+<div id="app" class="app" hidden>
+  <nav class="side" aria-label="Bölümler">
+    <h1 class="brand small">Defterim</h1>
+    <button class="tab" data-view="recipes">Tarifler <span class="count" id="c-recipes"></span></button>
+    <button class="tab" data-view="accounts">Hesaplar <span class="count" id="c-accounts"></span></button>
+    <button class="tab" data-view="notes">Notlar <span class="count" id="c-notes"></span></button>
+    <div class="side-actions">
+      <button id="exportBtn" type="button">Yedek indir</button>
+      <button id="importBtn" type="button">Yedek yükle</button>
+      <button id="lockNow" type="button">Kilitle</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="main-head">
+      <h2 id="viewTitle"></h2>
+      <input type="search" id="search" aria-label="Ara">
+      <button id="addBtn" class="btn primary" type="button"></button>
+    </header>
+    <div id="list" class="list"></div>
+  </main>
+</div>
+
+<dialog id="editor">
+  <form id="editorForm">
+    <h3 id="editorTitle"></h3>
+    <div id="fields"></div>
+    <div class="dialog-actions">
+      <button type="button" id="deleteBtn" class="btn danger">Sil</button>
+      <span class="spacer"></span>
+      <button type="button" id="cancelBtn" class="btn">Vazgeç</button>
+      <button type="submit" class="btn primary">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="fileInput" accept="application/json,.json" hidden>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
