@@ -18,10 +18,19 @@
   <div class="login-box">
     <div class="login-heart" aria-hidden="true">♡</div>
     <h1>Kim giriyor?</h1>
-    <div class="login-btns">
+    <div class="login-btns" id="loginPick">
       <button type="button" class="login-btn burcun" data-profile="burcun">Burcun</button>
       <button type="button" class="login-btn dodom" data-profile="dodom">Dodom</button>
     </div>
+    <form class="login-form" id="loginForm" autocomplete="off" hidden>
+      <p class="login-who"><span id="loginWho"></span> için şifreni yaz</p>
+      <input type="password" id="loginPw" class="login-pw" aria-label="Şifre" autocomplete="current-password">
+      <p class="login-err" id="loginErr" role="alert"></p>
+      <div class="login-btns">
+        <button type="button" class="login-btn small" id="loginBack">Geri</button>
+        <button type="submit" class="login-btn small go" id="loginGo">Giriş</button>
+      </div>
+    </form>
   </div>
 </div>
 
