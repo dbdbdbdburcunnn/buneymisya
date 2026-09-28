@@ -1669,16 +1669,19 @@ const noteCard = (sec, n, extra = "") => `<article class="item note">
   <p class="note-date">${esc(dateShort(n.updated || n.created))}</p>
   ${extra}
   ${n.body ? `<p class="note-body">${esc(n.body)}</p>` : ""}
+  ${authorLine(n)}
   ${editBtn(sec, n.id)}
 </article>`;
 
 const taskCard = (sec, x, sub = "") => `<article class="item task ${x.done ? "done" : ""}">
   <input type="checkbox" class="check" data-action="toggle" data-sec="${sec}" data-id="${esc(x.id)}" ${x.done ? "checked" : ""} aria-label="Tamamlandı olarak işaretle">
-  <div><span class="item-title">${esc(x.title)}</span>${sub}</div>
+  <div><span class="item-title">${esc(x.title)}</span>${sub}${authorLine(x)}</div>
   ${editBtn(sec, x.id)}
 </article>`;
 
 const noteLine = t => (t ? `<p class="film-note">${esc(t)}</p>` : "");
+
+const authorLine = x => (PROFILES[x.author] ? `<p class="author" data-who="${x.author}">${esc(PROFILES[x.author])} tarafından girildi</p>` : "");
 
 const templates = {
   accounts: a => `<article class="item account">
@@ -1704,6 +1707,7 @@ const templates = {
         </div>
       </div>
       ${a.note ? `<p class="account-note">${esc(a.note)}</p>` : ""}
+      ${authorLine(a)}
       ${editBtn("accounts", a.id)}
     </article>`,
   recipes: r => {
@@ -1715,7 +1719,8 @@ const templates = {
       <div class="recipe-body">
         <div>${ing.length ? `<h4>Malzemeler</h4><ul>${ing.map(i => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}</div>
         <div>${st.length ? `<h4>Yapılışı</h4><ol>${st.map(i => `<li>${esc(i)}</li>`).join("")}</ol>` : ""}</div>
-        ${editBtn("recipes", r.id)}
+        ${authorLine(r)}
+      ${editBtn("recipes", r.id)}
       </div>
     </details>`;
   },
@@ -1740,6 +1745,7 @@ const templates = {
         </div>
       </div>
       ${e.note ? `<p class="account-note">${esc(e.note)}</p>` : ""}
+      ${authorLine(e)}
       ${editBtn("emails", e.id)}
     </article>`,
   films: f => {
@@ -1756,6 +1762,7 @@ const templates = {
         <label class="watch"><input type="checkbox" class="check" data-action="watch" data-sec="films" data-id="${esc(f.id)}" ${f.watched ? "checked" : ""}>İzledik</label>
         <span class="stars" role="group" aria-label="Puan">${stars}</span>
       </div>
+      ${authorLine(f)}
       ${editBtn("films", f.id)}
     </article>`;
   },
@@ -1763,6 +1770,7 @@ const templates = {
       <div class="item-head"><span class="item-title">${esc(f.title)}</span>${extLink(f.url)}</div>
       ${tags([f.kind])}
       ${noteLine(f.note)}
+      ${authorLine(f)}
       ${editBtn("favorites", f.id)}
     </article>`,
   doodle: d => {
@@ -1772,6 +1780,7 @@ const templates = {
       ${st ? tags([d.sale, st === "on" ? d.price : ""]) : ""}
       ${String(d.img || "").startsWith("data:image/") ? `<img class="doodle-img" src="${esc(d.img)}" alt="${esc(d.title)}">` : ""}
       ${noteLine(d.note)}
+      ${authorLine(d)}
       ${editBtn("doodle", d.id)}
     </article>`;
   },
@@ -1786,6 +1795,7 @@ const templates = {
       </div>
       ${m.body ? `<p class="note-body">${esc(m.body)}</p>` : ""}
       ${m.gratitude ? `<p class="gratitude"><span>Güzel olan:</span> ${esc(m.gratitude)}</p>` : ""}
+      ${authorLine(m)}
       ${editBtn("mood", m.id)}
     </article>`;
   }
@@ -1958,7 +1968,7 @@ function checkList(sec, items) {
 function renderHome() {
   const today = todayStr();
 
-  const todayMood = data.mood.find(m => m.date === today);
+  const todayMood = data.mood.find(m => m.date === today && m.author === profile);
   const moodCard = `<section class="card" data-tone="mood">
     <header class="card-head"><span class="card-icon">${iconSvg("mood")}</span><h3>Bugün nasıl hissediyorsun?</h3></header>
     <div class="mood-pick">${MOODS.map(m => {
@@ -2002,12 +2012,12 @@ function renderHome() {
 function quickMood(val) {
   const now = Date.now();
   const day = todayStr();
-  const m = data.mood.find(x => x.date === day);
+  const m = data.mood.find(x => x.date === day && x.author === profile);
   if (m) {
     m.mood = val;
     m.updated = now;
   } else {
-    data.mood.push({ id: newId(), created: now, updated: now, title: "Günün ruh hali", date: day, mood: val, body: "", gratitude: "" });
+    data.mood.push({ id: newId(), created: now, updated: now, author: profile, title: "Günün ruh hali", date: day, mood: val, body: "", gratitude: "" });
   }
   save();
   render();
@@ -2368,7 +2378,7 @@ $("editorForm").addEventListener("submit", e => {
       wishlist: { done: false },
       films: { watched: false, rating: 0 }
     };
-    data[current].push({ id: newId(), created: now, updated: now, ...(extras[current] || {}), ...values });
+    data[current].push({ id: newId(), created: now, updated: now, author: profile, ...(extras[current] || {}), ...values });
   }
   save();
   $("editor").close();
