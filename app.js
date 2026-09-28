@@ -32,6 +32,7 @@ const BADGES = [
   { id: "streak-30", name: "30 gün seri", test: g => g.bestStreak >= 30 }
 ];
 const MOODS = ["😊 Harika", "🙂 İyi", "😐 Fena değil", "😔 Üzgün", "😣 Stresli"];
+const SALE = ["Sadece bende", "Satılık", "Satıldı"];
 const PRIORITY = ["Çok istiyorum", "İstiyorum", "Belki"];
 const QUOTES = [
   "Küçük adımlar, büyük hayallere götürür.",
@@ -61,7 +62,7 @@ const NAV = [
   { id: "growth", name: "Müzik önerileri", hint: "Dinle, keşfet, paylaş" },
   { id: "films", name: "Film ve dizi", hint: "İzlenecekler ve puanların" },
   { id: "favorites", name: "Favoriler", hint: "Siteler, müzikler, filmler" },
-  { id: "doodle", name: "Çizim", hint: "Çiz, hayal et, tasarla" },
+  { id: "doodle", name: "Çizim", hint: "Resimlerini yükle, satılığa koy" },
   { id: "mood", name: "Hissettiklerim", hint: "Hislerini yaz, hafifle" },
   { id: "ideas", name: "Fikir kutusu", hint: "Aklına gelen her şey" },
   { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" }
@@ -99,10 +100,7 @@ let beforeSearch = "home";
 let profile = "burcun";
 let pendingProfile = null;
 let failCount = 0;
-let pad = null;
-let padDirty = false;
-let padInit = "";
-let erasing = false;
+let saleFilter = "all";
 const searchQ = {};
 let cloud = loadCloud();
 let pushTimer = null;
@@ -204,11 +202,14 @@ const views = {
     ]
   },
   doodle: {
-    add: "Çizim yap",
-    empty: "Henüz çizim yok. “Çizim yap” diyip parmağınla ya da fareyle çizmeye başla.",
+    add: "Resim ekle",
+    empty: "Henüz resim yok. “Resim ekle” ile bir resim yükle, istersen satılığa koy.",
     fields: [
       { name: "title", label: "Başlık", required: true },
-      { name: "img", label: "Çizim", type: "draw" }
+      { name: "img", label: "Resim", type: "image" },
+      { name: "sale", label: "Durumu", type: "select", options: SALE },
+      { name: "price", label: "Satış fiyatı", placeholder: "₺500" },
+      { name: "note", label: "Not", type: "textarea", rows: 3 }
     ]
   },
   mood: {
@@ -794,12 +795,16 @@ const templates = {
       ${noteLine(f.note)}
       ${editBtn("favorites", f.id)}
     </article>`,
-  doodle: d => `<article class="item doodle">
+  doodle: d => {
+    const st = d.sale === "Satılık" ? "on" : d.sale === "Satıldı" ? "done" : "";
+    return `<article class="item doodle ${st ? "sale-" + st : ""}">
       <span class="item-title">${esc(d.title)}</span>
-      <p class="note-date">${esc(dateShort(d.updated || d.created))}</p>
+      ${st ? tags([d.sale, st === "on" ? d.price : ""]) : ""}
       ${String(d.img || "").startsWith("data:image/") ? `<img class="doodle-img" src="${esc(d.img)}" alt="${esc(d.title)}">` : ""}
+      ${noteLine(d.note)}
       ${editBtn("doodle", d.id)}
-    </article>`,
+    </article>`;
+  },
   mood: m => {
     const parts = String(m.mood || "").split(" ");
     const emoji = parts[0] || "";
@@ -887,7 +892,10 @@ function subtitle(sec) {
     case "emails": return `${total} adres`;
     case "ideas": return `${total} fikir`;
     case "favorites": return `${total} favori`;
-    case "doodle": return `${total} çizim`;
+    case "doodle": {
+      const n = data.doodle.filter(x => x.sale === "Satılık").length;
+      return `${total} resim${n ? `, ${n} satılık` : ""}`;
+    }
     case "mood": return `${total} gün`;
     case "plans": return open ? `${open} bekleyen plan` : "Hepsi tamam";
     case "growth": return open ? `${open} dinlenecek` : "Hepsi dinlendi";
@@ -915,6 +923,13 @@ function buildViews() {
           <button type="button" class="chip" data-filter="done">İzlediklerimiz</button>
         </div>`
       : "";
+    const sfilters = sec === "doodle"
+      ? `<div class="filters" id="saleFilters" role="group" aria-label="Filtre">
+          <button type="button" class="chip" data-sfilter="all">Hepsi</button>
+          <button type="button" class="chip" data-sfilter="Satılık">Satılık</button>
+          <button type="button" class="chip" data-sfilter="Satıldı">Satıldı</button>
+        </div>`
+      : "";
     const game = sec === "goals" ? `<div class="game" id="game"></div>` : "";
     return `<section class="view" data-sec="${sec}" hidden>
       <header class="view-head">
@@ -927,7 +942,7 @@ function buildViews() {
           <button class="btn primary" data-add="${sec}" type="button">${esc(v.add)}</button>
         </div>
       </header>
-      ${filters}${game}
+      ${filters}${sfilters}${game}
       <div class="${STACKS.includes(sec) ? "stack" : "grid"}" id="list-${sec}"></div>
     </section>`;
   }).join("");
@@ -937,6 +952,7 @@ function renderSection(sec) {
   const q = searchQ[sec] || "";
   let pool = data[sec].filter(i => matches(i, q));
   if (sec === "films" && filmFilter !== "all") pool = pool.filter(f => (filmFilter === "done") === !!f.watched);
+  if (sec === "doodle" && saleFilter !== "all") pool = pool.filter(x => x.sale === saleFilter);
   const items = sorted(sec, pool);
   $("s-" + sec).textContent = subtitle(sec);
   $("list-" + sec).innerHTML = items.length
@@ -1078,52 +1094,48 @@ function render() {
   SECTIONS.forEach(sec => renderSection(sec));
   renderGame();
   renderHome();
+  document.querySelectorAll("#saleFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.sfilter === saleFilter)));
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
 }
 
-/* ---------- Çizim tahtası ---------- */
+/* ---------- Resim yükleme ---------- */
 
-function initPad(src) {
-  const c = $("pad");
-  if (!c) { pad = null; return; }
-  pad = c;
-  padDirty = false;
-  padInit = src || "";
-  erasing = false;
-  const x = c.getContext("2d");
-  x.fillStyle = "#FFFFFF";
-  x.fillRect(0, 0, c.width, c.height);
-  if (String(src).startsWith("data:image/")) {
-    const im = new Image();
-    im.onload = () => x.drawImage(im, 0, 0, c.width, c.height);
-    im.src = src;
+let imgVal = "";
+
+function setPreview() {
+  const p = $("imgPrev");
+  if (!p) return;
+  const ok = String(imgVal).startsWith("data:image/");
+  p.hidden = !ok;
+  if (ok) p.src = imgVal;
+  const rm = document.querySelector('[data-img="remove"]');
+  if (rm) rm.hidden = !ok;
+}
+
+function loadImage(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    toast("Lütfen bir resim seç.");
+    return;
   }
-  let down = false;
-  const pos = e => {
-    const r = c.getBoundingClientRect();
-    return [(e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height];
+  const rd = new FileReader();
+  rd.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 700 / Math.max(im.width, im.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(im.width * k);
+      c.height = Math.round(im.height * k);
+      const x = c.getContext("2d");
+      x.fillStyle = "#FFFFFF";
+      x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(im, 0, 0, c.width, c.height);
+      imgVal = c.toDataURL("image/jpeg", 0.72);
+      setPreview();
+    };
+    im.onerror = () => toast("Resim açılamadı.");
+    im.src = rd.result;
   };
-  c.onpointerdown = e => {
-    down = true;
-    padDirty = true;
-    c.setPointerCapture(e.pointerId);
-    x.lineCap = "round";
-    x.lineJoin = "round";
-    x.strokeStyle = erasing ? "#FFFFFF" : $("penColor").value;
-    x.lineWidth = Number($("penSize").value) * (erasing ? 3 : 1);
-    const [a, b] = pos(e);
-    x.beginPath();
-    x.moveTo(a, b);
-    x.lineTo(a + 0.1, b);
-    x.stroke();
-  };
-  c.onpointermove = e => {
-    if (!down) return;
-    const [a, b] = pos(e);
-    x.lineTo(a, b);
-    x.stroke();
-  };
-  c.onpointerup = c.onpointercancel = () => { down = false; };
+  rd.readAsDataURL(file);
 }
 
 /* ---------- Düzenleyici ---------- */
@@ -1136,15 +1148,11 @@ function fieldHtml(f, value) {
   if (f.type === "textarea") {
     return `<label for="${id}">${esc(f.label)}</label>${hint}<textarea id="${id}" name="${f.name}" rows="${f.rows || 4}"${ph}>${esc(value)}</textarea>`;
   }
-  if (f.type === "draw") {
-    return `<label>${esc(f.label)}</label>
-      <canvas id="pad" class="pad" width="640" height="420" aria-label="Çizim alanı"></canvas>
-      <div class="pad-tools">
-        <input id="penColor" type="color" class="color-input" value="#6B2D45" aria-label="Renk">
-        <input id="penSize" type="range" min="1" max="24" value="4" aria-label="Kalem kalınlığı">
-        <button type="button" class="btn small" data-pad="erase" aria-pressed="false">Silgi</button>
-        <button type="button" class="btn small" data-pad="clear">Temizle</button>
-      </div>`;
+  if (f.type === "image") {
+    return `<label for="imgFile">${esc(f.label)}</label><span class="hint">Telefondan ya da bilgisayardan bir resim seç.</span>
+      <input id="imgFile" type="file" accept="image/*">
+      <img id="imgPrev" class="doodle-img" alt="Seçilen resim" hidden>
+      <div class="pad-tools"><button type="button" class="btn small danger" data-img="remove" hidden>Resmi kaldır</button></div>`;
   }
   if (f.type === "password") {
     return `<label for="${id}">${esc(f.label)}</label>
@@ -1168,7 +1176,7 @@ function fieldHtml(f, value) {
 function openEditor(sec, item, preset) {
   current = sec;
   editingId = item ? item.id : null;
-  pad = null;
+  imgVal = "";
   $("editorTitle").textContent = item ? "Düzenle" : views[sec].add;
   $("fields").innerHTML = views[sec].fields.map(f => {
     let v = "";
@@ -1179,8 +1187,11 @@ function openEditor(sec, item, preset) {
   }).join("");
   $("deleteBtn").hidden = !item;
   $("editor").showModal();
-  const drawField = views[sec].fields.find(f => f.type === "draw");
-  if (drawField) initPad(item ? item[drawField.name] : "");
+  const imgField = views[sec].fields.find(f => f.type === "image");
+  if (imgField) {
+    imgVal = item ? item[imgField.name] || "" : "";
+    setPreview();
+  }
   const first = $("fields").querySelector("input, textarea, select");
   if (first) first.focus();
 }
@@ -1201,6 +1212,12 @@ document.addEventListener("click", e => {
   const add = e.target.closest("[data-add]");
   if (add) {
     openEditor(add.dataset.add, null);
+    return;
+  }
+  const sf = e.target.closest("[data-sfilter]");
+  if (sf) {
+    saleFilter = sf.dataset.sfilter;
+    render();
     return;
   }
   const filter = e.target.closest("[data-filter]");
@@ -1289,18 +1306,10 @@ document.querySelector(".panel").addEventListener("click", e => {
 });
 
 $("fields").addEventListener("click", e => {
-  const p = e.target.closest("[data-pad]");
-  if (p && pad) {
-    if (p.dataset.pad === "clear") {
-      const x = pad.getContext("2d");
-      x.fillStyle = "#FFFFFF";
-      x.fillRect(0, 0, pad.width, pad.height);
-      padDirty = true;
-    } else {
-      erasing = !erasing;
-      p.setAttribute("aria-pressed", String(erasing));
-      p.classList.toggle("primary", erasing);
-    }
+  if (e.target.closest("[data-img]")) {
+    imgVal = "";
+    $("imgFile").value = "";
+    setPreview();
     return;
   }
   const b = e.target.closest("[data-pw]");
@@ -1319,14 +1328,18 @@ $("fields").addEventListener("click", e => {
   }
 });
 
+$("fields").addEventListener("change", e => {
+  if (e.target.id === "imgFile") loadImage(e.target.files[0]);
+});
+
 $("editorForm").addEventListener("submit", e => {
   e.preventDefault();
   if (!current) return;
   const fd = new FormData(e.target);
   const values = {};
   views[current].fields.forEach(f => {
-    if (f.type === "draw") {
-      values[f.name] = pad && padDirty ? pad.toDataURL("image/png") : padInit;
+    if (f.type === "image") {
+      values[f.name] = imgVal;
       return;
     }
     const v = String(fd.get(f.name) || "");
