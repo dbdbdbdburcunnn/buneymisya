@@ -104,3 +104,6 @@
 .login-btn.small { min-width: 6.5rem; padding: 0.6rem 1.2rem; font-size: 1rem; background: rgba(0, 0, 0, 0.35); }
 .login-btn.go { background: #FFFFFF; color: #2B1720; }
 .login-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Ana sayfa: karşılama kartı tam genişlik */
+.top-row { grid-template-columns: minmax(0, 1fr); }
