@@ -7,91 +7,123 @@
 <title>Defterim</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Young+Serif&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="top">
-  <div class="top-inner">
-    <a href="#" class="brand">Defterim</a>
-    <nav class="jump" aria-label="Bölümler">
-      <a href="#accounts">Hesaplar</a>
-      <a href="#recipes">Tarifler</a>
-      <a href="#notes">Notlar</a>
-      <a href="#plans">Planlar</a>
-      <a href="#films">Film ve dizi</a>
-      <a href="#goals">Hedefler</a>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">Defterim</div>
+    <p class="today" id="today"></p>
+    <nav class="tiles" aria-label="Bölümler">
+      <button class="tile" data-open="accounts" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Hesaplar</span><span class="tile-sub" id="s-accounts"></span></span>
+      </button>
+      <button class="tile" data-open="recipes" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Tarifler</span><span class="tile-sub" id="s-recipes"></span></span>
+      </button>
+      <button class="tile" data-open="notes" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Notlar</span><span class="tile-sub" id="s-notes"></span></span>
+      </button>
+      <button class="tile" data-open="plans" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Planlar</span><span class="tile-sub" id="s-plans"></span></span>
+      </button>
+      <button class="tile" data-open="films" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Film ve dizi</span><span class="tile-sub" id="s-films"></span></span>
+      </button>
+      <button class="tile" data-open="goals" type="button">
+        <span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+        <span class="tile-text"><span class="tile-name">Hedefler</span><span class="tile-sub" id="s-goals"></span></span>
+      </button>
     </nav>
-    <input type="search" id="search" placeholder="Her yerde ara" aria-label="Her yerde ara">
-    <button type="button" id="syncStatus" class="sync" data-state="local">Sadece bu cihazda</button>
-  </div>
-</header>
+  </aside>
 
-<main class="page">
-  <section id="accounts" class="block">
-    <div class="block-head">
-      <h2>Hesaplar <span class="count" id="c-accounts"></span></h2>
-      <button class="btn primary" data-add="accounts" type="button">Hesap ekle</button>
-    </div>
-    <div class="grid" id="list-accounts"></div>
-  </section>
+  <main class="panel">
+    <section class="view" data-sec="accounts" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Hesaplar</h2>
+        <div class="view-tools">
+          <input type="search" data-search="accounts" placeholder="Hesaplarda ara" aria-label="Hesaplarda ara">
+          <button class="btn primary" data-add="accounts" type="button">Hesap ekle</button>
+        </div>
+      </header>
+      <div class="grid" id="list-accounts"></div>
+    </section>
 
-  <section id="recipes" class="block">
-    <div class="block-head">
-      <h2>Tarifler <span class="count" id="c-recipes"></span></h2>
-      <button class="btn primary" data-add="recipes" type="button">Tarif ekle</button>
-    </div>
-    <div class="stack" id="list-recipes"></div>
-  </section>
+    <section class="view" data-sec="recipes" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Tarifler</h2>
+        <div class="view-tools">
+          <input type="search" data-search="recipes" placeholder="Tariflerde ara" aria-label="Tariflerde ara">
+          <button class="btn primary" data-add="recipes" type="button">Tarif ekle</button>
+        </div>
+      </header>
+      <div class="stack" id="list-recipes"></div>
+    </section>
 
-  <section id="notes" class="block">
-    <div class="block-head">
-      <h2>Notlar <span class="count" id="c-notes"></span></h2>
-      <button class="btn primary" data-add="notes" type="button">Not ekle</button>
-    </div>
-    <div class="grid" id="list-notes"></div>
-  </section>
+    <section class="view" data-sec="notes" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Notlar</h2>
+        <div class="view-tools">
+          <input type="search" data-search="notes" placeholder="Notlarda ara" aria-label="Notlarda ara">
+          <button class="btn primary" data-add="notes" type="button">Not ekle</button>
+        </div>
+      </header>
+      <div class="grid" id="list-notes"></div>
+    </section>
 
-  <section id="plans" class="block">
-    <div class="block-head">
-      <h2>Planlar <span class="count" id="c-plans"></span></h2>
-      <button class="btn primary" data-add="plans" type="button">Plan ekle</button>
-    </div>
-    <div class="stack" id="list-plans"></div>
-  </section>
+    <section class="view" data-sec="plans" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Planlar</h2>
+        <div class="view-tools">
+          <input type="search" data-search="plans" placeholder="Planlarda ara" aria-label="Planlarda ara">
+          <button class="btn primary" data-add="plans" type="button">Plan ekle</button>
+        </div>
+      </header>
+      <div class="stack" id="list-plans"></div>
+    </section>
 
-  <section id="films" class="block">
-    <div class="block-head">
-      <h2>Film ve dizi <span class="count" id="c-films"></span></h2>
-      <button class="btn primary" data-add="films" type="button">Öneri ekle</button>
-    </div>
-    <div class="filters" id="filmFilters" role="group" aria-label="Filtre">
-      <button type="button" class="chip" data-filter="all">Hepsi</button>
-      <button type="button" class="chip" data-filter="todo">İzlenecekler</button>
-      <button type="button" class="chip" data-filter="done">İzlediklerimiz</button>
-    </div>
-    <div class="grid" id="list-films"></div>
-  </section>
+    <section class="view" data-sec="films" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Film ve dizi</h2>
+        <div class="view-tools">
+          <input type="search" data-search="films" placeholder="Önerilerde ara" aria-label="Önerilerde ara">
+          <button class="btn primary" data-add="films" type="button">Öneri ekle</button>
+        </div>
+      </header>
+      <div class="filters" id="filmFilters" role="group" aria-label="Filtre">
+        <button type="button" class="chip" data-filter="all">Hepsi</button>
+        <button type="button" class="chip" data-filter="todo">İzlenecekler</button>
+        <button type="button" class="chip" data-filter="done">İzlediklerimiz</button>
+      </div>
+      <div class="grid" id="list-films"></div>
+    </section>
 
-  <section id="goals" class="block">
-    <div class="block-head">
-      <h2>Hedefler <span class="count" id="c-goals"></span></h2>
-      <button class="btn primary" data-add="goals" type="button">Hedef ekle</button>
-    </div>
-    <div class="game" id="game"></div>
-    <div class="grid" id="list-goals"></div>
-  </section>
-
-  <footer class="foot">
-    <p>“Kaydet”e bastığın her şey bu tarayıcıya, bulut bağlıysa JSONBin'e de otomatik kaydedilir.</p>
-    <div class="foot-actions">
-      <button id="cloudBtn" class="btn" type="button">Bulut ayarları</button>
-      <button id="exportBtn" class="btn" type="button">Yedek indir</button>
-      <button id="importBtn" class="btn" type="button">Yedek yükle</button>
-    </div>
-  </footer>
-</main>
+    <section class="view" data-sec="goals" hidden>
+      <header class="view-head">
+        <button class="back" type="button">Bölümler</button>
+        <h2>Hedefler</h2>
+        <div class="view-tools">
+          <input type="search" data-search="goals" placeholder="Hedeflerde ara" aria-label="Hedeflerde ara">
+          <button class="btn primary" data-add="goals" type="button">Hedef ekle</button>
+        </div>
+      </header>
+      <div class="game" id="game"></div>
+      <div class="grid" id="list-goals"></div>
+    </section>
+  </main>
+</div>
 
 <dialog id="editor">
   <form id="editorForm">
@@ -106,29 +138,6 @@
   </form>
 </dialog>
 
-<dialog id="cloudDialog">
-  <form id="cloudForm">
-    <h3>Bulut kaydı</h3>
-    <p class="dialog-text">Kayıtların JSONBin'de saklanır, böylece her cihazdan aynı defteri görürsün. Anahtar yalnızca bu tarayıcıda tutulur, koda veya GitHub'a yazılmaz.</p>
-    <label for="cloudKey">API anahtarı (X-Master-Key)</label>
-    <div class="pw">
-      <input id="cloudKey" type="password" autocomplete="off" spellcheck="false" required>
-      <button type="button" class="btn small ghost" data-pw="toggle">Göster</button>
-    </div>
-    <label for="cloudBin">Bin ID</label>
-    <span class="hint">İlk kez kuruyorsan boş bırak, “Bağlan” senin için yeni bir bin oluşturur.</span>
-    <input id="cloudBin" type="text" autocomplete="off" spellcheck="false">
-    <p id="cloudError" class="form-error" role="alert"></p>
-    <div class="dialog-actions">
-      <button type="button" id="cloudDisconnect" class="btn danger">Bağlantıyı kes</button>
-      <span class="spacer"></span>
-      <button type="button" id="cloudCancel" class="btn">Vazgeç</button>
-      <button type="submit" id="cloudSubmit" class="btn primary">Bağlan</button>
-    </div>
-  </form>
-</dialog>
-
-<input type="file" id="fileInput" accept="application/json,.json" hidden>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
