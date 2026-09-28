@@ -8,6 +8,7 @@ const VIEW_KEY = "defterim.view";
 const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
 // Şifreler düz yazı olarak tutulmaz; Ekim1901. anahtarıyla PBKDF2 özeti alınır.
 const PW_SALT = "Ekim1901.";
+const LOCK_HASH = "f3fce4f7f8614b328fc8b14a5a88f0d24243d4dee5b36534cb66815052d65eed"; // Şifreler bölümünün kilidi (Ekim1901.)
 const PW_HASH = {
   burcun: "181371d3a4b370e3c5ff72d8e21b7154386659ab9619bd63936d5a199a2e879c",
   dodom: "58a2ecb4e10e322c388cf932c7c168bc64e909a427fa22af03a3fb3791b57d3e"
@@ -85,6 +86,7 @@ let active = "home";
 let beforeSearch = "home";
 let profile = "burcun";
 let pendingProfile = null;
+let accountsUnlocked = false;
 let failCount = 0;
 let saleFilter = "all";
 const searchQ = {};
@@ -608,6 +610,25 @@ async function copy(text) {
   }
 }
 
+/* ---------- Şifreler kilidi ---------- */
+
+function askLock() {
+  return new Promise(resolve => {
+    const d = $("lockBox");
+    $("lockPw").value = "";
+    $("lockErr").textContent = "";
+    d.returnValue = "";
+    d.addEventListener("close", () => resolve(d.returnValue === "ok"), { once: true });
+    d.showModal();
+    $("lockPw").focus();
+  });
+}
+
+function relock() {
+  accountsUnlocked = false;
+  if (active === "accounts") openView("home", false);
+}
+
 /* ---------- Giriş ve tema ---------- */
 
 async function hashPw(pw) {
@@ -619,6 +640,7 @@ async function hashPw(pw) {
 
 function showLogin() {
   pendingProfile = null;
+  relock();
   $("loginPick").hidden = false;
   $("loginForm").hidden = true;
   $("loginPw").value = "";
@@ -671,6 +693,7 @@ function setProfile(p) {
   document.documentElement.dataset.theme = p;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = p === "dodom" ? "#050810" : "#2B1720";
+  relock();
   $("login").hidden = true;
   $("loginPw").value = "";
   render();
@@ -965,8 +988,11 @@ function quoteOf(shift) {
 }
 
 function miniCard(sec) {
-  const rows = sorted(sec, data[sec]).slice(0, 4).map(x => x.title);
-  const list = rows.length
+  const locked = sec === "accounts" && !accountsUnlocked;
+  const rows = locked ? [] : sorted(sec, data[sec]).slice(0, 4).map(x => x.title);
+  const list = locked
+    ? `<p class="mini-empty">Şifre ile korunuyor.</p>`
+    : rows.length
     ? `<ul class="mini-list">${rows.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`
     : `<p class="mini-empty">${esc(views[sec].empty.split(".")[0])}.</p>`;
   return `<section class="card" data-tone="${sec}">
@@ -1053,6 +1079,11 @@ function renderSearch(q) {
 
 function openView(sec, fromUser) {
   if (sec !== "search" && !VIEW_IDS.includes(sec)) sec = "home";
+  if (sec === "accounts" && !accountsUnlocked) {
+    if (fromUser) askLock().then(ok => { if (ok) openView("accounts", true); });
+    if (fromUser) return;
+    sec = "home";
+  }
   active = sec;
   if (sec !== "search") {
     try { localStorage.setItem(VIEW_KEY, sec); } catch {}
@@ -1243,6 +1274,35 @@ document.addEventListener("keydown", e => {
 });
 
 $("cancelBtn").addEventListener("click", () => $("editor").close());
+
+$("lockCancel").addEventListener("click", () => $("lockBox").close("no"));
+$("lockForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const err = $("lockErr");
+  if (!(window.crypto && crypto.subtle)) {
+    err.textContent = "Bu tarayıcıda şifre kontrolü çalışmıyor. Siteyi https ile aç.";
+    return;
+  }
+  const btn = $("lockGo");
+  btn.disabled = true;
+  try {
+    if ((await hashPw($("lockPw").value)) === LOCK_HASH) {
+      failCount = 0;
+      accountsUnlocked = true;
+      renderHome();
+      $("lockBox").close("ok");
+    } else {
+      failCount++;
+      err.textContent = "Şifre yanlış.";
+      $("lockPw").value = "";
+      await new Promise(r => setTimeout(r, Math.min(failCount, 5) * 800));
+    }
+  } catch {
+    err.textContent = "Şifre kontrol edilemedi.";
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 document.querySelector(".panel").addEventListener("click", e => {
   const b = e.target.closest("[data-action]");
