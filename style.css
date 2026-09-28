@@ -107,6 +107,36 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .top input { margin-left: auto; max-width: 16rem; }
 
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sync::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sync[data-state="ok"]::before { background: var(--moss); }
+.sync[data-state="saving"]::before { background: var(--saffron); }
+.sync[data-state="error"] { color: var(--danger); }
+.sync[data-state="error"]::before { background: var(--danger); }
+
+.dialog-text { color: var(--muted); margin: 0.6rem 0 0; font-size: 0.93rem; }
+.form-error { color: var(--danger); min-height: 1.3em; margin: 0.8rem 0 0; font-size: 0.9rem; }
+
 .page {
   max-width: 70rem;
   margin: 0 auto;
@@ -389,10 +419,12 @@ dialog::backdrop { background: rgba(20, 28, 24, 0.5); }
 
 @media (max-width: 800px) {
   :root { --top-h: 7.5rem; }
+  .sync { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .top-inner { flex-wrap: wrap; gap: 0.6rem 1rem; }
   .jump { order: 3; width: 100%; overflow-x: auto; }
   .jump a { padding: 0.35rem 0.6rem; }
   .top input { margin-left: auto; max-width: none; flex: 1 1 10rem; }
+  .sync { order: 2; }
   .recipe-body { grid-template-columns: 1fr; }
   .pw { flex-wrap: wrap; }
   .pw input { flex-basis: 100%; }
