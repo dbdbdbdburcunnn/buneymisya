@@ -115,3 +115,33 @@
 .doodle.sale-done { border-top-color: var(--muted); }
 .doodle.sale-done .doodle-img { opacity: 0.6; }
 .doodle.sale-on .tag:first-child { background: var(--gold); color: #2B1720; font-weight: 600; }
+
+/* Silme onay penceresi */
+dialog.confirm { width: min(22rem, calc(100vw - 2rem)); text-align: center; overflow: visible; }
+dialog.confirm[open] { animation: confirm-in 0.22s ease-out; }
+dialog.confirm::backdrop { background: rgba(20, 10, 16, 0.6); backdrop-filter: blur(4px); }
+:root[data-theme="dodom"] dialog.confirm::backdrop { background: rgba(2, 4, 12, 0.7); }
+dialog.confirm form { padding: 2rem 1.5rem 1.5rem; }
+.confirm-icon {
+  width: 4.2rem;
+  height: 4.2rem;
+  margin: 0 auto 1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  box-shadow: 0 0 0 0.55rem color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.confirm-icon svg { width: 1.9rem; height: 1.9rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+dialog.confirm h3 { font-family: "Fraunces", Georgia, serif; font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+.confirm-name { margin: 0.5rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.confirm-text { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.92rem; }
+.confirm-actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; }
+.confirm-actions .btn { flex: 1; padding: 0.7rem 1rem; }
+.btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #FFFFFF; }
+.btn.danger-solid:hover { filter: brightness(1.08); border-color: var(--danger); }
+@keyframes confirm-in {
+  from { opacity: 0; transform: translateY(0.6rem) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
