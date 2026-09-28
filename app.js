@@ -1370,8 +1370,20 @@ $("editorForm").addEventListener("submit", e => {
   toast("Kaydedildi");
 });
 
-$("deleteBtn").addEventListener("click", () => {
-  if (!current || !editingId || !confirm("Bu kayıt kalıcı olarak silinecek. Emin misin?")) return;
+function askDelete(title) {
+  return new Promise(resolve => {
+    const d = $("confirmBox");
+    $("confirmName").textContent = title ? "“" + title + "”" : "";
+    d.returnValue = "";
+    d.addEventListener("close", () => resolve(d.returnValue === "yes"), { once: true });
+    d.showModal();
+  });
+}
+
+$("deleteBtn").addEventListener("click", async () => {
+  if (!current || !editingId) return;
+  const target = data[current].find(x => x.id === editingId);
+  if (!(await askDelete(target && target.title))) return;
   data[current] = data[current].filter(x => x.id !== editingId);
   save();
   $("editor").close();
