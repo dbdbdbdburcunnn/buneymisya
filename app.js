@@ -6,7 +6,8 @@ const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9
 const DEFAULT_BIN = "";
 const API_ROOT = "https://api.jsonbin.io/v3";
 const BIN_NAME = "Bizee Özel";
-const POLL_MS = 10000;
+const POLL_MS = 60000;
+const IDLE_MS = 5 * 60000;
 const VIEW_KEY = "defterim.view";
 const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
 // Şifreler düz yazı olarak tutulmaz; Ekim1901. anahtarıyla PBKDF2 özeti alınır.
@@ -108,6 +109,7 @@ let pushTimer = null;
 let pushing = false;
 let pendingPush = false;
 let pollTimer = null;
+let lastActive = Date.now();
 let lastRemote = null;
 
 const views = {
@@ -1609,7 +1611,9 @@ async function pullNow() {
 function startPolling() {
   if (pollTimer) return;
   pollTimer = setInterval(() => {
-    if (!document.hidden && $("login").hidden && !pendingPush) pullNow();
+    if (document.hidden || !$("login").hidden || pendingPush) return;
+    if (Date.now() - lastActive > IDLE_MS) return;
+    pullNow();
   }, POLL_MS);
 }
 
@@ -2568,6 +2572,14 @@ window.addEventListener("online", () => {
 });
 
 window.addEventListener("focus", () => { if (!pendingPush) pullNow(); });
+
+["pointerdown", "keydown", "scroll", "touchstart"].forEach(ev => {
+  window.addEventListener(ev, () => {
+    const wasIdle = Date.now() - lastActive > IDLE_MS;
+    lastActive = Date.now();
+    if (wasIdle && cloud && !pendingPush) pullNow();
+  }, { passive: true });
+});
 
 window.addEventListener("pagehide", () => {
   if (cloud && cloud.shared && pendingPush) {
