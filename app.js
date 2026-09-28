@@ -6,6 +6,12 @@ const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9
 const DEFAULT_BIN = "";
 const VIEW_KEY = "defterim.view";
 const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
+// Şifreler düz yazı olarak tutulmaz; Ekim1901. anahtarıyla PBKDF2 özeti alınır.
+const PW_SALT = "Ekim1901.";
+const PW_HASH = {
+  burcun: "181371d3a4b370e3c5ff72d8e21b7154386659ab9619bd63936d5a199a2e879c",
+  dodom: "58a2ecb4e10e322c388cf932c7c168bc64e909a427fa22af03a3fb3791b57d3e"
+};
 const SECTIONS = [
   "accounts", "recipes", "notes", "plans", "films", "goals",
   "emails", "growth", "favorites", "doodle", "mood", "ideas", "wishlist"
@@ -91,6 +97,8 @@ let filmFilter = "all";
 let active = "home";
 let beforeSearch = "home";
 let profile = "burcun";
+let pendingProfile = null;
+let failCount = 0;
 let pad = null;
 let padDirty = false;
 let padInit = "";
@@ -581,6 +589,61 @@ async function copy(text) {
 
 /* ---------- Giriş ve tema ---------- */
 
+async function hashPw(pw) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode(PW_SALT), iterations: 200000, hash: "SHA-256" }, key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function showLogin() {
+  pendingProfile = null;
+  $("loginPick").hidden = false;
+  $("loginForm").hidden = true;
+  $("loginPw").value = "";
+  $("loginErr").textContent = "";
+  $("login").hidden = false;
+}
+
+function pickProfile(p) {
+  if (!PROFILES[p]) return;
+  pendingProfile = p;
+  $("loginPick").hidden = true;
+  $("loginForm").hidden = false;
+  $("loginWho").textContent = PROFILES[p];
+  $("loginPw").value = "";
+  $("loginErr").textContent = "";
+  $("loginPw").focus();
+}
+
+async function submitLogin(e) {
+  e.preventDefault();
+  if (!pendingProfile) return;
+  const err = $("loginErr");
+  if (!(window.crypto && crypto.subtle)) {
+    err.textContent = "Bu tarayıcıda şifre kontrolü çalışmıyor. Siteyi https ile aç.";
+    return;
+  }
+  const btn = $("loginGo");
+  btn.disabled = true;
+  try {
+    const h = await hashPw($("loginPw").value);
+    if (h === PW_HASH[pendingProfile]) {
+      failCount = 0;
+      setProfile(pendingProfile);
+    } else {
+      failCount++;
+      err.textContent = "Şifre yanlış.";
+      $("loginPw").value = "";
+      await new Promise(r => setTimeout(r, Math.min(failCount, 5) * 800));
+    }
+  } catch {
+    err.textContent = "Şifre kontrol edilemedi.";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function setProfile(p) {
   if (!PROFILES[p]) p = "burcun";
   profile = p;
@@ -588,6 +651,7 @@ function setProfile(p) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = p === "dodom" ? "#050810" : "#2B1720";
   $("login").hidden = true;
+  $("loginPw").value = "";
   render();
   window.scrollTo(0, 0);
 }
@@ -1134,7 +1198,7 @@ function openEditor(sec, item, preset) {
 document.addEventListener("click", e => {
   const prof = e.target.closest("[data-profile]");
   if (prof) {
-    setProfile(prof.dataset.profile);
+    pickProfile(prof.dataset.profile);
     return;
   }
   const open = e.target.closest("[data-open]");
@@ -1176,8 +1240,10 @@ $("menuBtn").addEventListener("click", () => document.body.classList.toggle("nav
 $("scrim").addEventListener("click", () => document.body.classList.remove("nav-open"));
 $("switchBtn").addEventListener("click", () => {
   document.body.classList.remove("nav-open");
-  $("login").hidden = false;
+  showLogin();
 });
+$("loginForm").addEventListener("submit", submitLogin);
+$("loginBack").addEventListener("click", showLogin);
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") document.body.classList.remove("nav-open");
 });
