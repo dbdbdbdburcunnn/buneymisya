@@ -4,7 +4,7 @@ const DIRTY_KEY = "defterim.dirty";
 const API = "https://api.jsonbin.io/v3/b";
 const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9y";
 const DEFAULT_BIN = "";
-const CLOUD_OFF_KEY = "defterim.cloud.off";
+const VIEW_KEY = "defterim.view";
 const SECTIONS = ["accounts", "recipes", "notes", "plans", "films", "goals"];
 const XP_STEP = 10;
 const XP_WIN = 100;
@@ -27,6 +27,8 @@ let current = null;
 let editingId = null;
 let toastTimer = null;
 let filmFilter = "all";
+let active = SECTIONS[0];
+const searchQ = {};
 let cloud = loadCloud();
 let pushTimer = null;
 let pushing = false;
@@ -266,28 +268,13 @@ function loadCloud() {
   try {
     const c = JSON.parse(localStorage.getItem(CLOUD_KEY) || "null");
     if (c && c.key && c.bin) return c;
-    if (localStorage.getItem(CLOUD_OFF_KEY) === "1") return null;
-  } catch {
-    return null;
-  }
+  } catch {}
   return DEFAULT_KEY && DEFAULT_BIN ? { key: DEFAULT_KEY, bin: DEFAULT_BIN } : null;
 }
 
 function storeCloud(c) {
   cloud = c;
-  try {
-    if (c) {
-      localStorage.setItem(CLOUD_KEY, JSON.stringify(c));
-      localStorage.removeItem(CLOUD_OFF_KEY);
-    } else {
-      localStorage.removeItem(CLOUD_KEY);
-      localStorage.setItem(CLOUD_OFF_KEY, "1");
-    }
-  } catch {}
-}
-
-function autoSetupAllowed() {
-  try { return !!DEFAULT_KEY && localStorage.getItem(CLOUD_OFF_KEY) !== "1"; } catch { return false; }
+  try { localStorage.setItem(CLOUD_KEY, JSON.stringify(c)); } catch {}
 }
 
 function markClean() {
@@ -296,16 +283,6 @@ function markClean() {
 
 function isDirty() {
   try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch { return false; }
-}
-
-function setStatus(state, text) {
-  const el = $("syncStatus");
-  el.dataset.state = state;
-  el.textContent = text;
-}
-
-function errorText(e) {
-  return e instanceof TypeError ? "İnternet bağlantısı kurulamadı." : e.message;
 }
 
 async function responseError(res) {
@@ -352,7 +329,6 @@ async function cloudCreate(key, body) {
 function schedulePush() {
   if (!cloud) return;
   pendingPush = true;
-  setStatus("saving", "Kaydediliyor…");
   clearTimeout(pushTimer);
   pushTimer = setTimeout(pushNow, 1500);
 }
@@ -369,69 +345,44 @@ async function pushNow() {
   try {
     await cloudWrite(cloud, data);
     markClean();
-    if (!pendingPush) setStatus("ok", "Buluta kaydedildi");
-  } catch (e) {
+  } catch {
     pendingPush = true;
-    setStatus("error", "Buluta kaydedilemedi, bu cihazda duruyor");
-    toast(errorText(e));
+    toast("Buluta kaydedilemedi, kayıtların bu cihazda duruyor.");
   } finally {
     pushing = false;
   }
 }
 
 async function syncOnOpen() {
-  if (!cloud && autoSetupAllowed() && !DEFAULT_BIN) {
-    setStatus("saving", "Bulut hazırlanıyor…");
+  if (!cloud && DEFAULT_KEY && !DEFAULT_BIN) {
     try {
       const id = await cloudCreate(DEFAULT_KEY, data);
       storeCloud({ key: DEFAULT_KEY, bin: id });
       markClean();
-      setStatus("ok", "Buluta bağlı");
-      toast(`Bulut hazır. Bin ID: ${id}`);
-    } catch (e) {
-      setStatus("error", "Buluta ulaşılamadı, bu cihazdakiler gösteriliyor");
-      toast(errorText(e));
+    } catch {
+      toast("Buluta ulaşılamadı, kayıtların bu cihazda duruyor.");
     }
     return;
   }
-  if (!cloud) {
-    setStatus("local", "Sadece bu cihazda");
-    return;
-  }
+  if (!cloud) return;
   if (isDirty() && hasContent(data)) {
     pendingPush = true;
-    setStatus("saving", "Kaydediliyor…");
     await pushNow();
     return;
   }
-  setStatus("saving", "Buluttan yükleniyor…");
   try {
     const rec = await cloudRead(cloud);
     if (hasContent(rec)) {
       data = normalizeData(rec);
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
       render();
-      setStatus("ok", "Buluta bağlı");
     } else if (hasContent(data)) {
       pendingPush = true;
       await pushNow();
-    } else {
-      setStatus("ok", "Buluta bağlı");
     }
-  } catch (e) {
-    setStatus("error", "Buluta ulaşılamadı, bu cihazdakiler gösteriliyor");
-    toast(errorText(e));
+  } catch {
+    toast("Buluta ulaşılamadı, bu cihazdaki kayıtlar gösteriliyor.");
   }
-}
-
-function openCloud() {
-  $("cloudKey").value = cloud ? cloud.key : DEFAULT_KEY;
-  $("cloudBin").value = cloud ? cloud.bin : "";
-  $("cloudError").textContent = "";
-  $("cloudDisconnect").hidden = !cloud;
-  $("cloudSubmit").textContent = cloud ? "Kaydet ve eşitle" : "Bağlan";
-  $("cloudDialog").showModal();
-  $("cloudKey").focus();
 }
 
 function esc(s) {
@@ -639,7 +590,8 @@ function sorted(sec, items) {
   return list.sort(byTitle);
 }
 
-function renderSection(sec, q) {
+function renderSection(sec) {
+  const q = searchQ[sec] || "";
   let pool = data[sec].filter(i => matches(i, q));
   if (sec === "films" && filmFilter !== "all") pool = pool.filter(f => (filmFilter === "done") === !!f.watched);
   const items = sorted(sec, pool);
@@ -648,15 +600,41 @@ function renderSection(sec, q) {
   if (sec === "plans") openCount = data.plans.filter(p => !p.done).length;
   if (sec === "films") openCount = data.films.filter(f => !f.watched).length;
   if (sec === "goals") openCount = data.goals.filter(x => (Number(x.progress) || 0) < Math.max(1, Number(x.target) || 1)).length;
-  $("c-" + sec).textContent = total ? String(openCount) : "";
+  $("s-" + sec).textContent = subtitle(sec, total, openCount);
   $("list-" + sec).innerHTML = items.length
     ? items.map(templates[sec]).join("")
     : `<p class="empty">${q ? "Aramanla eşleşen kayıt yok." : esc(views[sec].empty)}</p>`;
 }
 
+function subtitle(sec, total, open) {
+  if (sec === "goals") {
+    const lv = levelOf(data.game.xp);
+    const streak = currentStreak(data.game.days);
+    return `Seviye ${lv}${streak ? `, ${streak} gün seri` : ""}`;
+  }
+  if (!total) return "Henüz boş";
+  if (sec === "accounts") return `${total} hesap`;
+  if (sec === "recipes") return `${total} tarif`;
+  if (sec === "notes") return `${total} not`;
+  if (sec === "plans") return open ? `${open} bekleyen plan` : "Hepsi tamam";
+  if (sec === "films") return open ? `${open} izlenecek` : "Hepsi izlendi";
+  return "";
+}
+
+function openView(sec, fromUser) {
+  if (!SECTIONS.includes(sec)) sec = SECTIONS[0];
+  active = sec;
+  try { localStorage.setItem(VIEW_KEY, sec); } catch {}
+  document.querySelectorAll(".view").forEach(v => { v.hidden = v.dataset.sec !== sec; });
+  document.querySelectorAll("[data-open]").forEach(t => t.setAttribute("aria-current", String(t.dataset.open === sec)));
+  if (fromUser) {
+    document.body.classList.add("is-open");
+    window.scrollTo(0, 0);
+  }
+}
+
 function render() {
-  const q = $("search").value.trim().toLocaleLowerCase("tr");
-  SECTIONS.forEach(sec => renderSection(sec, q));
+  SECTIONS.forEach(sec => renderSection(sec));
   renderGame();
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
 }
@@ -699,23 +677,27 @@ function openEditor(sec, item) {
   if (first) first.focus();
 }
 
-function exportBackup() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `defterim-yedek-${todayStr()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast("Yedek indirildi");
-}
-
 document.querySelectorAll("[data-add]").forEach(b => {
   b.addEventListener("click", () => openEditor(b.dataset.add, null));
 });
 
-$("search").addEventListener("input", render);
+document.querySelectorAll("[data-search]").forEach(inp => {
+  inp.addEventListener("input", () => {
+    searchQ[inp.dataset.search] = inp.value.trim().toLocaleLowerCase("tr");
+    renderSection(inp.dataset.search);
+  });
+});
+
+document.querySelectorAll("[data-open]").forEach(t => {
+  t.addEventListener("click", () => openView(t.dataset.open, true));
+});
+
+document.querySelectorAll(".back").forEach(b => {
+  b.addEventListener("click", () => {
+    document.body.classList.remove("is-open");
+    window.scrollTo(0, 0);
+  });
+});
 document.querySelectorAll("#filmFilters .chip").forEach(c => {
   c.addEventListener("click", () => {
     filmFilter = c.dataset.filter;
@@ -723,10 +705,8 @@ document.querySelectorAll("#filmFilters .chip").forEach(c => {
   });
 });
 $("cancelBtn").addEventListener("click", () => $("editor").close());
-$("exportBtn").addEventListener("click", exportBackup);
-$("importBtn").addEventListener("click", () => $("fileInput").click());
 
-document.querySelector(".page").addEventListener("click", e => {
+document.querySelector(".panel").addEventListener("click", e => {
   const b = e.target.closest("[data-action]");
   if (!b) return;
   const sec = b.dataset.sec;
@@ -822,92 +802,6 @@ $("deleteBtn").addEventListener("click", () => {
   toast("Silindi");
 });
 
-$("fileInput").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  e.target.value = "";
-  if (!file) return;
-  try {
-    const p = JSON.parse(await file.text());
-    if (!p || !SECTIONS.some(sec => Array.isArray(p[sec]))) throw new Error();
-    if (!confirm("Bu cihazdaki kayıtlar, yedekteki kayıtlarla değiştirilecek. Devam edilsin mi?")) return;
-    SECTIONS.forEach(sec => { data[sec] = Array.isArray(p[sec]) ? p[sec] : []; });
-    data.game = normalizeGame(p.game);
-    save();
-    render();
-    toast("Yedek yüklendi");
-  } catch {
-    toast("Bu dosya geçerli bir Defterim yedeği değil.");
-  }
-});
-
-$("syncStatus").addEventListener("click", openCloud);
-$("cloudBtn").addEventListener("click", openCloud);
-$("cloudCancel").addEventListener("click", () => $("cloudDialog").close());
-
-$("cloudDialog").addEventListener("click", e => {
-  const b = e.target.closest('[data-pw="toggle"]');
-  if (!b) return;
-  const input = b.closest(".pw").querySelector("input");
-  const show = input.type === "password";
-  input.type = show ? "text" : "password";
-  b.textContent = show ? "Gizle" : "Göster";
-});
-
-$("cloudDisconnect").addEventListener("click", () => {
-  if (!confirm("Bulut bağlantısı kesilecek. Kayıtların bu cihazda ve JSONBin'de durmaya devam eder. Devam edilsin mi?")) return;
-  storeCloud(null);
-  markClean();
-  pendingPush = false;
-  clearTimeout(pushTimer);
-  setStatus("local", "Sadece bu cihazda");
-  $("cloudDialog").close();
-  toast("Bulut bağlantısı kesildi");
-});
-
-$("cloudForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const key = $("cloudKey").value.trim();
-  const bin = $("cloudBin").value.trim();
-  const err = $("cloudError");
-  const btn = $("cloudSubmit");
-  err.textContent = "";
-  if (!key) return;
-  btn.disabled = true;
-  try {
-    if (!bin) {
-      const id = await cloudCreate(key, data);
-      storeCloud({ key, bin: id });
-      markClean();
-      setStatus("ok", "Buluta kaydedildi");
-      $("cloudDialog").close();
-      toast("Yeni bin oluşturuldu, kayıtların buluta yüklendi.");
-      return;
-    }
-    const c = { key, bin };
-    const rec = await cloudRead(c);
-    if (hasContent(rec)) {
-      if (hasContent(data) && !confirm("Buluttaki kayıtlar bu cihazdakilerin yerine geçecek. Devam edilsin mi?")) return;
-      storeCloud(c);
-      data = normalizeData(rec);
-      localStorage.setItem(STORE_KEY, JSON.stringify(data));
-      markClean();
-      render();
-      setStatus("ok", "Buluta bağlı");
-      toast("Buluttaki kayıtlar yüklendi");
-    } else {
-      storeCloud(c);
-      pendingPush = true;
-      await pushNow();
-      toast("Kayıtların buluta yüklendi");
-    }
-    $("cloudDialog").close();
-  } catch (x) {
-    err.textContent = errorText(x);
-  } finally {
-    btn.disabled = false;
-  }
-});
-
 window.addEventListener("online", () => { if (cloud && pendingPush) pushNow(); });
 
 window.addEventListener("pagehide", () => {
@@ -917,6 +811,10 @@ window.addEventListener("pagehide", () => {
   }
 });
 
+$("today").textContent = new Date().toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" });
+
 data = load();
+try { active = localStorage.getItem(VIEW_KEY) || SECTIONS[0]; } catch {}
+openView(active, false);
 render();
 syncOnOpen();
