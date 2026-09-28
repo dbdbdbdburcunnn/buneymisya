@@ -83,6 +83,21 @@
   </form>
 </dialog>
 
+<dialog id="confirmBox" class="confirm">
+  <form method="dialog">
+    <div class="confirm-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>
+    </div>
+    <h3>Bunu silelim mi?</h3>
+    <p class="confirm-name" id="confirmName"></p>
+    <p class="confirm-text">Silinen kayıt geri getirilemez.</p>
+    <div class="confirm-actions">
+      <button type="submit" value="no" class="btn" autofocus>Vazgeç</button>
+      <button type="submit" value="yes" class="btn danger-solid">Evet, sil</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
