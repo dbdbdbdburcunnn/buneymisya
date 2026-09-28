@@ -1,16 +1,10 @@
-const STORE_KEY = "defterim.v1";
-const IDLE_MS = 10 * 60 * 1000;
+const STORE_KEY = "defterim.data";
 const SECTIONS = ["recipes", "accounts", "notes"];
-const enc = new TextEncoder();
-const dec = new TextDecoder();
 const $ = id => document.getElementById(id);
 
-let key = null;
-let salt = null;
 let data = null;
 let view = "recipes";
 let editingId = null;
-let idleTimer = null;
 let toastTimer = null;
 
 const views = {
@@ -52,55 +46,20 @@ const views = {
   }
 };
 
-function toB64(buf) {
-  const bytes = new Uint8Array(buf);
-  let s = "";
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return btoa(s);
-}
-
-function fromB64(str) {
-  const bin = atob(str);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
-async function deriveKey(pass, saltBytes) {
-  const base = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: saltBytes, iterations: 310000, hash: "SHA-256" },
-    base,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-
-async function encryptData(obj) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(obj)));
-  return { v: 1, salt: toB64(salt), iv: toB64(iv), data: toB64(ct) };
-}
-
-async function decryptPayload(payload, k) {
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(payload.iv) }, k, fromB64(payload.data));
-  return JSON.parse(dec.decode(pt));
-}
-
-function readStore() {
+function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const d = raw ? JSON.parse(raw) : {};
+    SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
+    return d;
   } catch {
-    return null;
+    return { recipes: [], accounts: [], notes: [] };
   }
 }
 
-async function save() {
-  const payload = await encryptData(data);
+function save() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
   } catch {
     toast("Kaydedilemedi. Tarayıcı depolaması dolu ya da kapalı olabilir.");
   }
@@ -127,7 +86,7 @@ function safeUrl(u) {
 }
 
 function newId() {
-  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 function toast(msg) {
@@ -184,7 +143,7 @@ const templates = {
       </div>` : ""}
       ${a.password ? `<div class="field-row">
         <span class="field-label">Şifre</span>
-        <span class="field-value secret" data-secret="${esc(a.id)}">••••••••</span>
+        <span class="field-value secret">••••••••</span>
         <span class="row-btns">
           <button class="btn small ghost" data-action="reveal" data-id="${esc(a.id)}">Göster</button>
           <button class="btn small ghost" data-action="copy" data-field="password" data-id="${esc(a.id)}">Kopyala</button>
@@ -218,11 +177,10 @@ function matches(item, q) {
 function sorted(items) {
   const list = [...items];
   if (view === "notes") return list.sort((a, b) => (b.updated || 0) - (a.updated || 0));
-  return list.sort((a, b) => a.title.localeCompare(b.title, "tr"));
+  return list.sort((a, b) => String(a.title).localeCompare(String(b.title), "tr"));
 }
 
 function render() {
-  if (!data) return;
   const cfg = views[view];
   SECTIONS.forEach(s => { $("c-" + s).textContent = data[s].length || ""; });
   document.querySelectorAll(".tab").forEach(t => {
@@ -269,56 +227,8 @@ function openEditor(item) {
   if (first) first.focus();
 }
 
-function setupLock() {
-  const isNew = !readStore();
-  $("confirmWrap").hidden = !isNew;
-  $("master2").required = isNew;
-  $("master").autocomplete = isNew ? "new-password" : "current-password";
-  $("lockText").textContent = isNew
-    ? "İlk kez açıyorsun. Defterini kilitleyecek bir ana şifre belirle (en az 8 karakter). Bu şifreyi unutursan içeriğe kimse ulaşamaz, sen de dahil."
-    : "Devam etmek için ana şifreni gir.";
-  $("lockBtn").textContent = isNew ? "Defteri oluştur" : "Kilidi aç";
-  $("lockError").textContent = "";
-}
-
-function unlock() {
-  $("master").value = "";
-  $("master2").value = "";
-  $("lock").hidden = true;
-  $("app").hidden = false;
-  $("search").value = "";
-  render();
-  resetIdle();
-}
-
-function lock() {
-  key = null;
-  salt = null;
-  data = null;
-  editingId = null;
-  clearTimeout(idleTimer);
-  if ($("editor").open) $("editor").close();
-  $("list").innerHTML = "";
-  $("app").hidden = true;
-  $("lock").hidden = false;
-  setupLock();
-  $("master").focus();
-}
-
-function resetIdle() {
-  clearTimeout(idleTimer);
-  if (key) {
-    idleTimer = setTimeout(() => {
-      lock();
-      toast("Uzun süre işlem yapılmadığı için defter kilitlendi.");
-    }, IDLE_MS);
-  }
-}
-
 function exportBackup() {
-  const raw = localStorage.getItem(STORE_KEY);
-  if (!raw) return toast("İndirilecek veri yok.");
-  const blob = new Blob([raw], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `defterim-yedek-${new Date().toISOString().slice(0, 10)}.json`;
@@ -328,47 +238,6 @@ function exportBackup() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast("Yedek indirildi");
 }
-
-$("lockForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const err = $("lockError");
-  err.textContent = "";
-  if (!window.crypto || !crypto.subtle) {
-    err.textContent = "Bu tarayıcı şifrelemeyi desteklemiyor. Siteyi https adresinden aç.";
-    return;
-  }
-  const pass = $("master").value;
-  const stored = readStore();
-  $("lockBtn").disabled = true;
-  try {
-    if (!stored) {
-      if (pass.length < 8) throw new Error("Ana şifre en az 8 karakter olmalı.");
-      if (pass !== $("master2").value) throw new Error("İki şifre birbirinin aynısı değil.");
-      salt = crypto.getRandomValues(new Uint8Array(16));
-      key = await deriveKey(pass, salt);
-      data = { recipes: [], accounts: [], notes: [] };
-      await save();
-    } else {
-      const s = fromB64(stored.salt);
-      const k = await deriveKey(pass, s);
-      let d;
-      try {
-        d = await decryptPayload(stored, k);
-      } catch {
-        throw new Error("Ana şifre yanlış.");
-      }
-      SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
-      salt = s;
-      key = k;
-      data = d;
-    }
-    unlock();
-  } catch (x) {
-    err.textContent = x.message;
-  } finally {
-    $("lockBtn").disabled = false;
-  }
-});
 
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
@@ -381,10 +250,8 @@ document.querySelectorAll(".tab").forEach(t => {
 $("search").addEventListener("input", render);
 $("addBtn").addEventListener("click", () => openEditor(null));
 $("cancelBtn").addEventListener("click", () => $("editor").close());
-$("lockNow").addEventListener("click", lock);
 $("exportBtn").addEventListener("click", exportBackup);
 $("importBtn").addEventListener("click", () => $("fileInput").click());
-$("importFromLock").addEventListener("click", () => $("fileInput").click());
 
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-action]");
@@ -422,7 +289,7 @@ $("fields").addEventListener("click", e => {
   }
 });
 
-$("editorForm").addEventListener("submit", async e => {
+$("editorForm").addEventListener("submit", e => {
   e.preventDefault();
   const fd = new FormData(e.target);
   const values = {};
@@ -438,16 +305,16 @@ $("editorForm").addEventListener("submit", async e => {
   } else {
     data[view].push({ id: newId(), created: now, updated: now, ...values });
   }
-  await save();
+  save();
   $("editor").close();
   render();
   toast("Kaydedildi");
 });
 
-$("deleteBtn").addEventListener("click", async () => {
+$("deleteBtn").addEventListener("click", () => {
   if (!editingId || !confirm("Bu kayıt kalıcı olarak silinecek. Emin misin?")) return;
   data[view] = data[view].filter(x => x.id !== editingId);
-  await save();
+  save();
   $("editor").close();
   render();
   toast("Silindi");
@@ -459,18 +326,16 @@ $("fileInput").addEventListener("change", async e => {
   if (!file) return;
   try {
     const p = JSON.parse(await file.text());
-    if (!p || !p.salt || !p.iv || !p.data) throw new Error();
-    if (readStore() && !confirm("Bu cihazdaki defter, yedekteki verilerle değiştirilecek. Devam edilsin mi?")) return;
-    localStorage.setItem(STORE_KEY, JSON.stringify(p));
-    lock();
-    toast("Yedek yüklendi. Yedeği alırken kullandığın ana şifreyle kilidi aç.");
+    if (!p || !SECTIONS.some(sec => Array.isArray(p[sec]))) throw new Error();
+    if (!confirm("Bu cihazdaki kayıtlar, yedekteki kayıtlarla değiştirilecek. Devam edilsin mi?")) return;
+    SECTIONS.forEach(sec => { data[sec] = Array.isArray(p[sec]) ? p[sec] : []; });
+    save();
+    render();
+    toast("Yedek yüklendi");
   } catch {
     toast("Bu dosya geçerli bir Defterim yedeği değil.");
   }
 });
 
-["pointerdown", "keydown", "scroll", "touchstart"].forEach(ev => {
-  document.addEventListener(ev, resetIdle, { passive: true });
-});
-
-setupLock();
+data = load();
+render();
