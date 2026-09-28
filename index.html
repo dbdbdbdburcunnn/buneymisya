@@ -12,27 +12,84 @@
 </head>
 <body>
 
-<div id="app" class="app">
-  <nav class="side" aria-label="Bölümler">
-    <h1 class="brand small">Defterim</h1>
-    <button class="tab" data-view="recipes">Tarifler <span class="count" id="c-recipes"></span></button>
-    <button class="tab" data-view="accounts">Hesaplar <span class="count" id="c-accounts"></span></button>
-    <button class="tab" data-view="notes">Notlar <span class="count" id="c-notes"></span></button>
-    <div class="side-actions">
-      <button id="exportBtn" type="button">Yedek indir</button>
-      <button id="importBtn" type="button">Yedek yükle</button>
-    </div>
-  </nav>
+<header class="top">
+  <div class="top-inner">
+    <a href="#" class="brand">Defterim</a>
+    <nav class="jump" aria-label="Bölümler">
+      <a href="#accounts">Hesaplar</a>
+      <a href="#recipes">Tarifler</a>
+      <a href="#notes">Notlar</a>
+      <a href="#plans">Planlar</a>
+      <a href="#films">Film ve dizi</a>
+      <a href="#goals">Hedefler</a>
+    </nav>
+    <input type="search" id="search" placeholder="Her yerde ara" aria-label="Her yerde ara">
+  </div>
+</header>
 
-  <main class="main">
-    <header class="main-head">
-      <h2 id="viewTitle"></h2>
-      <input type="search" id="search" aria-label="Ara">
-      <button id="addBtn" class="btn primary" type="button"></button>
-    </header>
-    <div id="list" class="list"></div>
-  </main>
-</div>
+<main class="page">
+  <section id="accounts" class="block">
+    <div class="block-head">
+      <h2>Hesaplar <span class="count" id="c-accounts"></span></h2>
+      <button class="btn primary" data-add="accounts" type="button">Hesap ekle</button>
+    </div>
+    <div class="grid" id="list-accounts"></div>
+  </section>
+
+  <section id="recipes" class="block">
+    <div class="block-head">
+      <h2>Tarifler <span class="count" id="c-recipes"></span></h2>
+      <button class="btn primary" data-add="recipes" type="button">Tarif ekle</button>
+    </div>
+    <div class="stack" id="list-recipes"></div>
+  </section>
+
+  <section id="notes" class="block">
+    <div class="block-head">
+      <h2>Notlar <span class="count" id="c-notes"></span></h2>
+      <button class="btn primary" data-add="notes" type="button">Not ekle</button>
+    </div>
+    <div class="grid" id="list-notes"></div>
+  </section>
+
+  <section id="plans" class="block">
+    <div class="block-head">
+      <h2>Planlar <span class="count" id="c-plans"></span></h2>
+      <button class="btn primary" data-add="plans" type="button">Plan ekle</button>
+    </div>
+    <div class="stack" id="list-plans"></div>
+  </section>
+
+  <section id="films" class="block">
+    <div class="block-head">
+      <h2>Film ve dizi <span class="count" id="c-films"></span></h2>
+      <button class="btn primary" data-add="films" type="button">Öneri ekle</button>
+    </div>
+    <div class="filters" id="filmFilters" role="group" aria-label="Filtre">
+      <button type="button" class="chip" data-filter="all">Hepsi</button>
+      <button type="button" class="chip" data-filter="todo">İzlenecekler</button>
+      <button type="button" class="chip" data-filter="done">İzlediklerimiz</button>
+    </div>
+    <div class="grid" id="list-films"></div>
+  </section>
+
+  <section id="goals" class="block">
+    <div class="block-head">
+      <h2>Hedefler <span class="count" id="c-goals"></span></h2>
+      <button class="btn primary" data-add="goals" type="button">Hedef ekle</button>
+    </div>
+    <div class="game" id="game"></div>
+    <div class="grid" id="list-goals"></div>
+  </section>
+
+  <footer class="foot">
+    <p>Kayıtlar yalnızca bu tarayıcıda saklanır. Başka bir cihaza taşımak için yedek al.</p>
+    <div class="foot-actions">
+      <button id="exportBtn" class="btn" type="button">Yedek indir</button>
+      <button id="importBtn" class="btn" type="button">Yedek yükle</button>
+    </div>
+  </footer>
+</main>
 
 <dialog id="editor">
   <form id="editorForm">
