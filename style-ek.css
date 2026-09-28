@@ -107,3 +107,11 @@
 
 /* Ana sayfa: karşılama kartı tam genişlik */
 .top-row { grid-template-columns: minmax(0, 1fr); }
+
+/* Resim kartları ve satılık işareti */
+.doodle-img { max-height: 22rem; object-fit: contain; }
+#imgFile { padding: 0.5rem; }
+.doodle.sale-on { border-top-color: var(--gold); }
+.doodle.sale-done { border-top-color: var(--muted); }
+.doodle.sale-done .doodle-img { opacity: 0.6; }
+.doodle.sale-on .tag:first-child { background: var(--gold); color: #2B1720; font-weight: 600; }
