@@ -4,6 +4,9 @@ const DIRTY_KEY = "defterim.dirty";
 const API = "https://api.jsonbin.io/v3/b";
 const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9y";
 const DEFAULT_BIN = "";
+const API_ROOT = "https://api.jsonbin.io/v3";
+const BIN_NAME = "Bizee Özel";
+const POLL_MS = 10000;
 const VIEW_KEY = "defterim.view";
 const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
 // Şifreler düz yazı olarak tutulmaz; Ekim1901. anahtarıyla PBKDF2 özeti alınır.
@@ -104,6 +107,8 @@ let cloud = loadCloud();
 let pushTimer = null;
 let pushing = false;
 let pendingPush = false;
+let pollTimer = null;
+let lastRemote = null;
 
 const views = {
   accounts: {
@@ -242,6 +247,7 @@ function load() {
   }
   SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
   d.bulmaca = normalizePuzzle(d.bulmaca);
+  d.deleted = normalizeDeleted(d.deleted);
   delete d.word;
   return d;
 }
@@ -810,6 +816,7 @@ function normalizePuzzle(p) {
     points: Number(src.points) || 0,
     no: Number(src.no) || 0,
     byLevel: LEVELS.map((_, i) => Number(Array.isArray(src.byLevel) && src.byLevel[i]) || 0),
+    updated: Number(src.updated) || 0,
     recent: Array.isArray(src.recent) ? src.recent.filter(x => typeof x === "string").slice(0, 150) : [],
     cur: null
   };
@@ -1168,6 +1175,7 @@ function finishPuzzle() {
   const cur = P.cur;
   const cfg = LEVELS[cur.lv];
   cur.done = true;
+  P.updated = Date.now();
   pzBad = new Set();
   const pts = Math.max(10, cfg.base + cur.words.length * 2 - cur.penalty);
   cur.earned = pts;
@@ -1354,6 +1362,7 @@ document.addEventListener("keydown", e => {
 });
 
 function saveLocal() {
+  if (data.bulmaca) data.bulmaca.updated = Date.now();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch {}
 }
 
@@ -1367,23 +1376,78 @@ function save() {
   schedulePush();
 }
 
-function normalizeData(d) {
+function normalizeDeleted(d) {
   const out = {};
-  SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec] : []; });
-  out.bulmaca = normalizePuzzle(d && d.bulmaca);
+  const limit = Date.now() - 180 * 86400000;
+  if (d && typeof d === "object") {
+    Object.entries(d).forEach(([id, t]) => {
+      const n = Number(t) || 0;
+      if (n > limit) out[id] = n;
+    });
+  }
   return out;
 }
 
-function hasContent(d) {
-  return !!d && SECTIONS.some(sec => Array.isArray(d[sec]) && d[sec].length > 0);
+function normalizeData(d) {
+  const out = {};
+  SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec].filter(x => x && x.id) : []; });
+  out.bulmaca = normalizePuzzle(d && d.bulmaca);
+  out.deleted = normalizeDeleted(d && d.deleted);
+  return out;
+}
+
+function looksLikeOurs(d) {
+  return !!d && typeof d === "object" && SECTIONS.some(sec => Array.isArray(d[sec]));
+}
+
+const stampOf = x => Number(x.updated) || Number(x.created) || 0;
+
+function mergeData(a, b) {
+  const deleted = normalizeDeleted(a.deleted);
+  Object.entries(normalizeDeleted(b.deleted)).forEach(([id, t]) => { deleted[id] = Math.max(deleted[id] || 0, t); });
+  const out = {};
+  SECTIONS.forEach(sec => {
+    const m = new Map();
+    [...(a[sec] || []), ...(b[sec] || [])].forEach(x => {
+      if (!x || !x.id || deleted[x.id]) return;
+      const cur = m.get(x.id);
+      if (!cur || stampOf(x) > stampOf(cur)) m.set(x.id, x);
+    });
+    out[sec] = [...m.values()];
+  });
+  const pa = a.bulmaca, pb = b.bulmaca;
+  out.bulmaca = (Number(pb && pb.updated) || 0) > (Number(pa && pa.updated) || 0) ? pb : pa;
+  out.deleted = deleted;
+  return out;
+}
+
+function sigOf(d) {
+  return SECTIONS.map(sec => (d[sec] || []).map(x => x.id + ":" + stampOf(x)).sort().join(",")).join("|") +
+    "|" + Object.keys(d.deleted || {}).sort().join(",") +
+    "|" + ((d.bulmaca && d.bulmaca.updated) || 0);
+}
+
+function adopt(next) {
+  if (sigOf(next) === sigOf(data)) return false;
+  const oldPz = data.bulmaca;
+  data = next;
+  if (data.bulmaca !== oldPz) {
+    pzSel = null;
+    pzBad = new Set();
+    pzWarned = false;
+  }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch {}
+  render();
+  return true;
 }
 
 function loadCloud() {
+  if (DEFAULT_KEY && DEFAULT_BIN) return { key: DEFAULT_KEY, bin: DEFAULT_BIN, shared: true };
   try {
     const c = JSON.parse(localStorage.getItem(CLOUD_KEY) || "null");
     if (c && c.key && c.bin) return c;
   } catch {}
-  return DEFAULT_KEY && DEFAULT_BIN ? { key: DEFAULT_KEY, bin: DEFAULT_BIN } : null;
+  return null;
 }
 
 function storeCloud(c) {
@@ -1410,7 +1474,8 @@ async function responseError(res) {
 
 async function cloudRead(c) {
   const res = await fetch(`${API}/${encodeURIComponent(c.bin)}/latest`, {
-    headers: { "X-Master-Key": c.key, "X-Bin-Meta": "false" }
+    headers: { "X-Master-Key": c.key, "X-Bin-Meta": "false" },
+    cache: "no-store"
   });
   if (!res.ok) throw await responseError(res);
   const j = await res.json();
@@ -1430,7 +1495,7 @@ async function cloudWrite(c, body, keepalive = false) {
 async function cloudCreate(key, body) {
   const res = await fetch(API, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Master-Key": key, "X-Bin-Private": "true", "X-Bin-Name": "Bizee Özel" },
+    headers: { "Content-Type": "application/json", "X-Master-Key": key, "X-Bin-Private": "true", "X-Bin-Name": BIN_NAME },
     body: JSON.stringify(body)
   });
   if (!res.ok) throw await responseError(res);
@@ -1440,15 +1505,71 @@ async function cloudCreate(key, body) {
   return id;
 }
 
+async function listBins(key) {
+  const out = [];
+  let last = "";
+  for (let page = 0; page < 20; page++) {
+    const res = await fetch(`${API_ROOT}/c/uncategorized/bins${last ? "/" + encodeURIComponent(last) : ""}`, {
+      headers: { "X-Master-Key": key, "X-Sort-Order": "ascending" },
+      cache: "no-store"
+    });
+    if (!res.ok) throw await responseError(res);
+    const arr = await res.json();
+    if (!Array.isArray(arr) || !arr.length) break;
+    arr.forEach(x => {
+      const id = x.record || x.id || (x.metadata && x.metadata.id);
+      if (!id) return;
+      out.push({
+        id,
+        name: (x.snippetMeta && x.snippetMeta.name) || x.name || (x.metadata && x.metadata.name) || "",
+        at: Date.parse(x.createdAt || (x.metadata && x.metadata.createdAt) || "") || 0
+      });
+    });
+    if (arr.length < 10) break;
+    last = out[out.length - 1].id;
+  }
+  return out;
+}
+
+async function resolveSharedBin() {
+  const key = DEFAULT_KEY;
+  const bins = await listBins(key);
+  const named = bins.filter(b => b.name === BIN_NAME);
+  const cands = (named.length ? named : bins).slice(0, 15);
+  if (cloud && cloud.bin && !cands.some(b => b.id === cloud.bin)) cands.push({ id: cloud.bin, at: Infinity });
+  const found = [];
+  for (const b of cands) {
+    try {
+      const rec = await cloudRead({ key, bin: b.id });
+      if (looksLikeOurs(rec)) found.push({ ...b, rec });
+    } catch {}
+  }
+  let merged = data;
+  found.forEach(f => { merged = mergeData(merged, normalizeData(f.rec)); });
+  let main;
+  if (found.length) {
+    found.sort((x, y) => x.at - y.at);
+    main = found[0].id;
+  } else {
+    main = await cloudCreate(key, merged);
+  }
+  storeCloud({ key, bin: main, shared: true });
+  merged = mergeData(data, merged);
+  await cloudWrite(cloud, merged);
+  lastRemote = merged;
+  markClean();
+  adopt(merged);
+}
+
 function schedulePush() {
   if (!cloud) return;
   pendingPush = true;
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(pushNow, 1500);
+  pushTimer = setTimeout(pushNow, 800);
 }
 
 async function pushNow() {
-  if (!cloud || !pendingPush) return;
+  if (!cloud || !cloud.shared || !pendingPush) return;
   if (pushing) {
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 800);
@@ -1457,8 +1578,12 @@ async function pushNow() {
   pushing = true;
   pendingPush = false;
   try {
-    await cloudWrite(cloud, data);
+    const remote = normalizeData(await cloudRead(cloud));
+    const merged = mergeData(data, remote);
+    if (sigOf(merged) !== sigOf(remote)) await cloudWrite(cloud, merged);
+    lastRemote = merged;
     markClean();
+    adopt(mergeData(data, merged));
   } catch {
     pendingPush = true;
     toast("Buluta kaydedilemedi, kayıtların bu cihazda duruyor.");
@@ -1467,44 +1592,40 @@ async function pushNow() {
   }
 }
 
-async function syncOnOpen() {
-  if (!cloud && DEFAULT_KEY && !DEFAULT_BIN) {
-    try {
-      const id = await cloudCreate(DEFAULT_KEY, data);
-      storeCloud({ key: DEFAULT_KEY, bin: id });
-      markClean();
-    } catch {
-      toast("Buluta ulaşılamadı, kayıtların bu cihazda duruyor.");
-    }
-    return;
-  }
-  if (!cloud) return;
-  if (isDirty() && hasContent(data)) {
-    pendingPush = true;
-    await pushNow();
-    return;
-  }
+async function pullNow() {
+  if (!cloud || !cloud.shared || pushing) return;
   try {
-    const rec = await cloudRead(cloud);
-    if (hasContent(rec)) {
-      const localPz = data.bulmaca;
-      data = normalizeData(rec);
-      const remotePz = data.bulmaca;
-      if (localPz && (localPz.solved > remotePz.solved || (localPz.solved === remotePz.solved && localPz.no >= remotePz.no))) {
-        data.bulmaca = localPz;
-      } else {
-        pzSel = null;
-        pzBad = new Set();
-      }
-      localStorage.setItem(STORE_KEY, JSON.stringify(data));
-      render();
-    } else if (hasContent(data)) {
+    const remote = normalizeData(await cloudRead(cloud));
+    lastRemote = remote;
+    const merged = mergeData(data, remote);
+    adopt(merged);
+    if (isDirty() || sigOf(merged) !== sigOf(remote)) {
       pendingPush = true;
-      await pushNow();
+      schedulePush();
     }
-  } catch {
-    toast("Buluta ulaşılamadı, bu cihazdaki kayıtlar gösteriliyor.");
+  } catch {}
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(() => {
+    if (!document.hidden && $("login").hidden && !pendingPush) pullNow();
+  }, POLL_MS);
+}
+
+async function syncOnOpen() {
+  if (!DEFAULT_KEY) return;
+  if (!cloud || !cloud.shared) {
+    try {
+      await resolveSharedBin();
+    } catch {
+      toast("Ortak kayıtlara ulaşılamadı, bu cihazdaki kayıtlar gösteriliyor.");
+      return;
+    }
+  } else {
+    await pullNow();
   }
+  startPolling();
 }
 
 function esc(s) {
@@ -2432,6 +2553,7 @@ $("deleteBtn").addEventListener("click", async () => {
   if (!current || !editingId) return;
   const target = data[current].find(x => x.id === editingId);
   if (!(await askDelete(target && target.title))) return;
+  data.deleted[editingId] = Date.now();
   data[current] = data[current].filter(x => x.id !== editingId);
   save();
   $("editor").close();
@@ -2439,12 +2561,19 @@ $("deleteBtn").addEventListener("click", async () => {
   toast("Silindi");
 });
 
-window.addEventListener("online", () => { if (cloud && pendingPush) pushNow(); });
+window.addEventListener("online", () => {
+  if (!cloud) return;
+  if (pendingPush) pushNow();
+  else pullNow();
+});
+
+window.addEventListener("focus", () => { if (!pendingPush) pullNow(); });
 
 window.addEventListener("pagehide", () => {
-  if (cloud && pendingPush) {
+  if (cloud && cloud.shared && pendingPush) {
     clearTimeout(pushTimer);
-    cloudWrite(cloud, data, true).then(markClean).catch(() => {});
+    const body = lastRemote ? mergeData(data, lastRemote) : data;
+    cloudWrite(cloud, body, true).then(markClean).catch(() => {});
   }
 });
 
@@ -2458,6 +2587,7 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     tick();
     renderHome();
+    if (cloud && !pendingPush) pullNow();
   }
 });
 
