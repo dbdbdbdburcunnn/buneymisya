@@ -1,108 +1,164 @@
-<!DOCTYPE html>
-<html lang="tr" data-theme="burcun">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#2B1720">
-<title>Bizee Özel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Figtree:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="style-ek.css">
-</head>
-<body>
+/* Kenar çubuğu: sadece kalp */
+.brand { font-size: 1rem; }
+.brand .heart { font-size: 2.6rem; line-height: 1; }
+.side-switch {
+  margin: 0.5rem 0.6rem 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.side-switch:hover { background: rgba(255, 255, 255, 0.1); }
 
-<div class="login" id="login">
-  <div class="login-box">
-    <div class="login-heart" aria-hidden="true">♡</div>
-    <p class="login-app">Bizee Özel</p>
-    <h1>Kim giriyor?</h1>
-    <div class="login-btns" id="loginPick">
-      <button type="button" class="login-btn burcun" data-profile="burcun">Burcun</button>
-      <button type="button" class="login-btn dodom" data-profile="dodom">Dodom</button>
-    </div>
-    <form class="login-form" id="loginForm" autocomplete="off" hidden>
-      <p class="login-who"><span id="loginWho"></span> için şifreni yaz</p>
-      <input type="password" id="loginPw" class="login-pw" aria-label="Şifre" autocomplete="current-password">
-      <p class="login-err" id="loginErr" role="alert"></p>
-      <div class="login-btns">
-        <button type="button" class="login-btn small" id="loginBack">Geri</button>
-        <button type="submit" class="login-btn small go" id="loginGo">Giriş</button>
-      </div>
-    </form>
-  </div>
-</div>
+/* Giriş ekranı */
+.login {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #2B1720 0%, #6B2D45 50%, #0A0F1E 50%, #050810 100%);
+}
+.login-box { text-align: center; color: #FFFFFF; }
+.login-heart { font-size: 3.5rem; line-height: 1; color: #FFC9D6; }
+.login-box h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 2rem; margin: 0.6rem 0 1.6rem; }
+.login-btns { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+.login-btn {
+  min-width: 10rem;
+  padding: 1rem 1.6rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+}
+.login-btn.burcun { background: #6B2D45; }
+.login-btn.dodom { background: #0A0F1E; }
+.login-btn:hover { border-color: #FFFFFF; }
+.login-btn:focus-visible { outline: 3px solid #FFFFFF; outline-offset: 3px; }
 
-<div class="shell">
-  <aside class="side" id="side" aria-label="Menü">
-    <div class="brand"><span class="heart" aria-hidden="true">♡</span></div>
-    <nav class="nav" id="nav" aria-label="Bölümler"></nav>
-    <p class="side-quote">Daha iyi bir sen,<br>her gün mümkün. <span class="heart" aria-hidden="true">♡</span></p>
-    <button type="button" class="side-switch" id="switchBtn">Hesap değiştir</button>
-  </aside>
-  <div class="scrim" id="scrim"></div>
+/* Çizim tahtası */
+.pad {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 420;
+  touch-action: none;
+  cursor: crosshair;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: #FFFFFF;
+}
+.pad-tools { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.pad-tools input[type="range"] { flex: 1; padding: 0; }
+.doodle-img { width: 100%; height: auto; margin-top: 0.4rem; border-radius: var(--radius-s); border: 1px solid var(--line); background: #FFFFFF; }
+.doodle { border-top: 4px solid var(--c); }
 
-  <main class="panel">
-    <header class="topbar">
-      <button class="menu-btn" id="menuBtn" type="button" aria-label="Menüyü aç">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
-      <label class="gsearch">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-        <input type="search" id="gsearch" placeholder="Aradığın her şey burada…" aria-label="Her yerde ara" autocomplete="off">
-      </label>
-      <div class="clock"><span id="today"></span><span id="time"></span></div>
-    </header>
+/* Dodom teması: siyah / lacivert */
+:root[data-theme="dodom"] {
+  --bg: #0A0F1E;
+  --surface: #111A30;
+  --ink: #E6EBF7;
+  --muted: #8D97B3;
+  --line: #222E4E;
+  --plum: #050810;
+  --rose: #7F9DFF;
+  --danger: #FF7A7A;
+  --gold: #F2C14E;
+  --on-c: #0A0F1E;
+  --c: #7F9DFF;
+  --tint: #182244;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --hero-default:
+    radial-gradient(circle at 80% 64%, #DCE6FF 0 2.2rem, rgba(127, 157, 255, 0.35) 2.3rem 6.5rem, transparent 6.6rem),
+    linear-gradient(165deg, #1B2A5E 0%, #101B3F 45%, #070C1C 100%);
+  color-scheme: dark;
+}
+:root[data-theme="dodom"] [data-tone],
+:root[data-theme="dodom"] .view[data-sec] { --c: #8FA8FF; --tint: #182244; }
+:root[data-theme="dodom"] .heart { color: #8FA8FF; }
+:root[data-theme="dodom"] .hero .heart { color: #C7D4FF; }
+:root[data-theme="dodom"] .game {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(127, 157, 255, 0.55), transparent 55%),
+    linear-gradient(135deg, #1B2A5E, #070C1C);
+}
+:root[data-theme="dodom"] .level-badge,
+:root[data-theme="dodom"] .badge.on { color: #0A0F1E; }
+:root[data-theme="dodom"] .goal-done { color: var(--gold); }
+:root[data-theme="dodom"] .quote-card .script { color: #C7D4FF; }
+:root[data-theme="dodom"] .btn:hover { border-color: var(--c); }
 
-    <section class="view" data-sec="home" id="home"></section>
+/* Giriş şifre adımı */
+.login-form { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+.login-who { margin: 0; font-size: 1.05rem; }
+.login-pw { width: min(18rem, 80vw); padding: 0.8rem 1rem; border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 999px; background: rgba(0, 0, 0, 0.35); color: #FFFFFF; text-align: center; font-size: 1.1rem; }
+.login-pw:focus { border-color: #FFFFFF; outline: none; }
+.login-err { min-height: 1.4rem; margin: 0; color: #FFB3B3; font-size: 0.92rem; }
+.login-btn.small { min-width: 6.5rem; padding: 0.6rem 1.2rem; font-size: 1rem; background: rgba(0, 0, 0, 0.35); }
+.login-btn.go { background: #FFFFFF; color: #2B1720; }
+.login-btn:disabled { opacity: 0.5; cursor: default; }
 
-    <section class="view" data-sec="search" id="searchView" hidden>
-      <header class="view-head">
-        <div class="view-title">
-          <div><h2>Arama sonuçları</h2><p class="view-sub" id="searchSub"></p></div>
-        </div>
-      </header>
-      <div class="stack" id="searchList"></div>
-    </section>
+/* Ana sayfa: karşılama kartı tam genişlik */
+.top-row { grid-template-columns: minmax(0, 1fr); }
 
-    <section class="view" data-sec="word" id="wordView" hidden></section>
+/* Resim kartları ve satılık işareti */
+.doodle-img { max-height: 22rem; object-fit: contain; }
+#imgFile { padding: 0.5rem; }
+.doodle.sale-on { border-top-color: var(--gold); }
+.doodle.sale-done { border-top-color: var(--muted); }
+.doodle.sale-done .doodle-img { opacity: 0.6; }
+.doodle.sale-on .tag:first-child { background: var(--gold); color: #2B1720; font-weight: 600; }
 
-    <div id="views"></div>
-  </main>
-</div>
+/* Silme onay penceresi */
+dialog.confirm { width: min(22rem, calc(100vw - 2rem)); text-align: center; overflow: visible; }
+dialog.confirm[open] { animation: confirm-in 0.22s ease-out; }
+dialog.confirm::backdrop { background: rgba(20, 10, 16, 0.6); backdrop-filter: blur(4px); }
+:root[data-theme="dodom"] dialog.confirm::backdrop { background: rgba(2, 4, 12, 0.7); }
+dialog.confirm form { padding: 2rem 1.5rem 1.5rem; }
+.confirm-icon {
+  width: 4.2rem;
+  height: 4.2rem;
+  margin: 0 auto 1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  box-shadow: 0 0 0 0.55rem color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.confirm-icon svg { width: 1.9rem; height: 1.9rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+dialog.confirm h3 { font-family: "Fraunces", Georgia, serif; font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+.confirm-name { margin: 0.5rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.confirm-text { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.92rem; }
+.confirm-actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; }
+.confirm-actions .btn { flex: 1; padding: 0.7rem 1rem; }
+.btn.danger-solid { background: var(--danger); border-color: var(--danger); color: #FFFFFF; }
+.btn.danger-solid:hover { filter: brightness(1.08); border-color: var(--danger); }
+@keyframes confirm-in {
+  from { opacity: 0; transform: translateY(0.6rem) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
 
-<dialog id="editor">
-  <form id="editorForm">
-    <h3 id="editorTitle"></h3>
-    <div id="fields"></div>
-    <div class="dialog-actions">
-      <button type="button" id="deleteBtn" class="btn danger">Sil</button>
-      <span class="spacer"></span>
-      <button type="button" id="cancelBtn" class="btn">Vazgeç</button>
-      <button type="submit" class="btn primary">Kaydet</button>
-    </div>
-  </form>
-</dialog>
-
-<dialog id="confirmBox" class="confirm">
-  <form method="dialog">
-    <div class="confirm-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>
-    </div>
-    <h3>Bunu silelim mi?</h3>
-    <p class="confirm-name" id="confirmName"></p>
-    <p class="confirm-text">Silinen kayıt geri getirilemez.</p>
-    <div class="confirm-actions">
-      <button type="submit" value="no" class="btn" autofocus>Vazgeç</button>
-      <button type="submit" value="yes" class="btn danger-solid">Evet, sil</button>
-    </div>
-  </form>
-</dialog>
-
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-<script src="app.js"></script>
-</body>
-</html>
+/* Kelime oyunu */
+[data-tone="word"], .view[data-sec="word"] { --c: #B5445A; --tint: #F9E2E0; }
+.login-app { margin: 0.4rem 0 0; font-family: "Caveat", cursive; font-size: 1.8rem; color: #FFC9D6; }
+.w-wrap { max-width: 26rem; margin: 0 auto; }
+.w-msg { text-align: center; margin: 0 0 1rem; color: var(--muted); min-height: 1.5rem; }
+.w-grid { display: flex; flex-direction: column; gap: 0.4rem; max-width: 19rem; margin: 0 auto 1.4rem; }
+.w-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; }
+.w-t { aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); font-weight: 700; font-size: 1.6rem; }
+.w-t.fill { border-color: var(--c); }
+.w-t.hit, .w-k.hit { background: #3F8F55; border-color: #3F8F55; color: #FFFFFF; }
+.w-t.near, .w-k.near { background: #C99700; border-color: #C99700; color: #FFFFFF; }
+.w-t.miss, .w-k.miss { background: #5E5A66; border-color: #5E5A66; color: #FFFFFF; }
+.w-kb { display: flex; justify-content: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.w-k { flex: 1 1 0; max-width: 2.7rem; min-width: 0; padding: 0.75rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 600; font-size: 0.95rem; cursor: pointer; }
+.w-k.wide { flex: 1.6 1 0; max-width: 4.2rem; font-size: 0.8rem; }
+.w-k:hover { border-color: var(--c); }
