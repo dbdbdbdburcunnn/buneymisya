@@ -54,7 +54,7 @@ button, input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
 
 .brand {
-  font-size: clamp(2.6rem, 8vw, 3.6rem);
+  font-size: 1.7rem;
   line-height: 1;
   letter-spacing: -0.01em;
 }
@@ -62,27 +62,12 @@ button, input, textarea { font: inherit; color: inherit; }
 .brand::after {
   content: "";
   display: block;
-  width: 2.2rem;
-  height: 0.3rem;
+  width: 1.4rem;
+  height: 0.22rem;
   background: var(--saffron);
   border-radius: 3px;
-  margin-top: 0.7rem;
+  margin-top: 0.5rem;
 }
-
-.brand.small { font-size: 1.7rem; }
-.brand.small::after { width: 1.4rem; height: 0.22rem; margin-top: 0.5rem; }
-
-.lock {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-}
-
-.lock-box { width: 100%; max-width: 24rem; }
-
-.lock-text { color: var(--muted); margin: 1.4rem 0 1.4rem; }
 
 label {
   display: block;
@@ -110,13 +95,6 @@ input:focus, textarea:focus { border-color: var(--moss); outline: none; }
 
 textarea { resize: vertical; line-height: 1.5; }
 
-.error {
-  color: var(--danger);
-  min-height: 1.4em;
-  margin: 0.6rem 0;
-  font-size: 0.9rem;
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -131,7 +109,6 @@ textarea { resize: vertical; line-height: 1.5; }
 }
 
 .btn:hover { border-color: var(--muted); }
-.btn:disabled { opacity: 0.6; cursor: wait; }
 
 .btn.primary { background: var(--moss); border-color: var(--moss); color: var(--moss-ink); }
 .btn.primary:hover { filter: brightness(1.08); }
@@ -143,19 +120,6 @@ textarea { resize: vertical; line-height: 1.5; }
 .btn.ghost:hover { border-color: var(--line); }
 
 .btn.small { padding: 0.3rem 0.65rem; font-size: 0.88rem; }
-
-#lockBtn { width: 100%; padding: 0.8rem; }
-
-.link-btn {
-  background: none;
-  border: 0;
-  padding: 0;
-  margin-top: 1.4rem;
-  color: var(--moss);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 
 .app {
   display: grid;
