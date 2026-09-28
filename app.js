@@ -13,24 +13,10 @@ const PW_HASH = {
   dodom: "58a2ecb4e10e322c388cf932c7c168bc64e909a427fa22af03a3fb3791b57d3e"
 };
 const SECTIONS = [
-  "accounts", "recipes", "notes", "plans", "films", "goals",
+  "accounts", "recipes", "notes", "plans", "films",
   "emails", "growth", "favorites", "doodle", "mood", "ideas", "wishlist"
 ];
 const STACKS = ["recipes", "plans", "growth", "wishlist"];
-const XP_STEP = 10;
-const XP_WIN = 100;
-const XP_LEVEL = 200;
-const LEVEL_NAMES = ["Çaylak", "Hevesli", "Kararlı", "Azimli", "Disiplinli", "Usta", "Şampiyon", "Efsane"];
-const BADGES = [
-  { id: "first-step", name: "İlk adım", test: g => g.steps >= 1 },
-  { id: "first-win", name: "İlk zafer", test: g => g.wins >= 1 },
-  { id: "streak-3", name: "3 gün seri", test: g => g.bestStreak >= 3 },
-  { id: "streak-7", name: "7 gün seri", test: g => g.bestStreak >= 7 },
-  { id: "wins-5", name: "5 hedef", test: g => g.wins >= 5 },
-  { id: "steps-100", name: "100 adım", test: g => g.steps >= 100 },
-  { id: "xp-1000", name: "Bin puan", test: g => g.xp >= 1000 },
-  { id: "streak-30", name: "30 gün seri", test: g => g.bestStreak >= 30 }
-];
 const MOODS = ["😊 Harika", "🙂 İyi", "😐 Fena değil", "😔 Üzgün", "😣 Stresli"];
 const SALE = ["Sadece bende", "Satılık", "Satıldı"];
 const PRIORITY = ["Çok istiyorum", "İstiyorum", "Belki"];
@@ -57,7 +43,7 @@ const NAV = [
   { id: "emails", name: "E-posta adresleri", hint: "Kişisel ve önemli e-postalar" },
   { id: "accounts", name: "Şifreler", hint: "Güvenli giriş bilgilerin" },
   { id: "recipes", name: "Tarifler", hint: "Lezzetli tarifler, favorilerin" },
-  { id: "goals", name: "Hedefler", hint: "Hayallerine giden yol" },
+  { id: "word", name: "Kelime oyunu", hint: "Kelimeyi 6 hakta bul" },
   { id: "plans", name: "Planlar", hint: "Yapacaklarını listele" },
   { id: "growth", name: "Müzik önerileri", hint: "Dinle, keşfet, paylaş" },
   { id: "films", name: "Film ve dizi", hint: "İzlenecekler ve puanların" },
@@ -67,8 +53,8 @@ const NAV = [
   { id: "ideas", name: "Fikir kutusu", hint: "Aklına gelen her şey" },
   { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" }
 ];
-const HOME_TILES = ["growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
-const VIEW_IDS = ["home", ...SECTIONS];
+const HOME_TILES = ["word", "growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
+const VIEW_IDS = ["home", "word", ...SECTIONS];
 const nameOf = id => (NAV.find(n => n.id === id) || {}).name || id;
 
 const ICONS = {
@@ -77,7 +63,7 @@ const ICONS = {
   emails: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   accounts: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   recipes: '<path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/>',
-  goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  word: '<rect x="3" y="6" width="5" height="5" rx="1"/><rect x="9.5" y="6" width="5" height="5" rx="1"/><rect x="16" y="6" width="5" height="5" rx="1"/><path d="M3 15h18M3 19h12"/>',
   plans: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>',
   growth: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
   films: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
@@ -157,17 +143,6 @@ const views = {
       { name: "platform", label: "Nerede izlenir?", placeholder: "Netflix, Disney+, sinema…" },
       { name: "by", label: "Kim önerdi?" },
       { name: "note", label: "Not", type: "textarea", rows: 3 }
-    ]
-  },
-  goals: {
-    add: "Hedef ekle",
-    empty: "Henüz hedef yok. Küçük bir hedefle başla, her adımda puan kazan.",
-    fields: [
-      { name: "title", label: "Hedef", placeholder: "Kitap oku, spor yap, su iç…", required: true },
-      { name: "target", label: "Kaç kez?", type: "number", placeholder: "30" },
-      { name: "unit", label: "Birim", placeholder: "gün, sayfa, antrenman…" },
-      { name: "deadline", label: "Son tarih", type: "date" },
-      { name: "reward", label: "Tamamlayınca ödülün", placeholder: "Sevdiğin restorana git…" }
     ]
   },
   emails: {
@@ -254,135 +229,180 @@ function load() {
     d = {};
   }
   SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
-  d.game = normalizeGame(d.game);
+  d.word = normalizeWord(d.word);
   return d;
 }
 
-function normalizeGame(g) {
-  const base = { xp: 0, steps: 0, wins: 0, bestStreak: 0, days: [], badges: [] };
-  const out = Object.assign(base, g && typeof g === "object" ? g : {});
-  if (!Array.isArray(out.days)) out.days = [];
-  if (!Array.isArray(out.badges)) out.badges = [];
+function normalizeWord(w) {
+  const out = Object.assign({ played: 0, won: 0, streak: 0, best: 0, cur: null }, w && typeof w === "object" ? w : {});
+  if (!out.cur || typeof out.cur.word !== "string" || !Array.isArray(out.cur.guesses)) out.cur = null;
   return out;
 }
-
-function levelOf(xp) { return Math.floor(xp / XP_LEVEL) + 1; }
-function levelName(level) { return LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)]; }
 
 function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function currentStreak(days) {
-  const set = new Set(days);
-  const d = new Date();
-  if (!set.has(ymd(d))) d.setDate(d.getDate() - 1);
-  let n = 0;
-  while (set.has(ymd(d))) {
-    n++;
-    d.setDate(d.getDate() - 1);
-  }
-  return n;
+/* ---------- Kelime oyunu ---------- */
+
+const WORDS = [
+  "KALEM", "KİTAP", "MASAL", "GÜNEŞ", "DENİZ", "ÇİÇEK", "SEVGİ", "HAYAT", "BULUT", "KÖPEK",
+  "BALIK", "ÇOCUK", "ARABA", "DÜNYA", "GÜZEL", "MUTLU", "ELMAS", "ŞEKER", "ÇANTA", "KAHVE",
+  "LİMON", "ZAMAN", "ÇAYIR", "TATLI", "MELEK", "ÖZLEM", "RESİM", "HAYAL", "GÜLÜŞ", "ÇİLEK",
+  "KİRAZ", "ARMUT", "ÇORBA", "PİLAV", "SAHİL", "YAZAR", "BAHAR", "SABAH", "AKŞAM", "HAFTA",
+  "MÜZİK", "ŞARKI", "SANAT", "GİTAR", "KOLYE", "YÜZÜK", "GÖLGE", "DALGA", "ORMAN", "NEHİR",
+  "KAYIK", "BEBEK", "ANNEM", "PERDE", "SOFRA", "TABAK", "KAŞIK", "ÇATAL", "GURUR", "SABIR",
+  "HUZUR", "KEYİF", "AŞKIM", "CANIM", "SEVDA", "GÖNÜL", "YILAN", "TİLKİ", "ASLAN", "ZEBRA",
+  "PANDA", "KUZEY", "GÜNEY", "ŞÖLEN", "DÜĞÜN", "SAKİN", "TEPSİ", "KUMRU", "KARGA", "SERÇE"
+];
+const ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+const KB = ["ERTYUIOPĞÜ", "ASDFGHJKLŞİ", "ZCVBNMÖÇ"];
+const MAX_TRY = 6;
+let wordInput = "";
+
+function freshGame() {
+  return { word: WORDS[Math.floor(Math.random() * WORDS.length)], guesses: [], done: false, won: false };
 }
 
-function checkBadges() {
-  const g = data.game;
-  const earned = [];
-  BADGES.forEach(b => {
-    if (!g.badges.includes(b.id) && b.test(g)) {
-      g.badges.push(b.id);
-      earned.push(b.name);
+function scoreGuess(g, w) {
+  const a = [...g];
+  const b = [...w];
+  const res = Array(5).fill("miss");
+  const left = {};
+  for (let i = 0; i < 5; i++) {
+    if (a[i] === b[i]) res[i] = "hit";
+    else left[b[i]] = (left[b[i]] || 0) + 1;
+  }
+  for (let i = 0; i < 5; i++) {
+    if (res[i] !== "hit" && left[a[i]] > 0) {
+      res[i] = "near";
+      left[a[i]]--;
     }
+  }
+  return res;
+}
+
+function keyStates(cur) {
+  const rank = { miss: 1, near: 2, hit: 3 };
+  const st = {};
+  cur.guesses.forEach(g => {
+    const chars = [...g];
+    scoreGuess(g, cur.word).forEach((r, i) => {
+      if (!st[chars[i]] || rank[r] > rank[st[chars[i]]]) st[chars[i]] = r;
+    });
   });
-  return earned;
+  return st;
 }
 
-function addXp(amount) {
-  const g = data.game;
-  const before = levelOf(g.xp);
-  g.xp = Math.max(0, g.xp + amount);
-  return levelOf(g.xp) > before;
-}
-
-function stepGoal(goal, dir) {
-  const g = data.game;
-  const target = Math.max(1, Number(goal.target) || 1);
-  const was = Number(goal.progress) || 0;
-  const wasDone = was >= target;
-  if (dir > 0 && wasDone) return;
-  if (dir < 0 && was <= 0) return;
-  goal.progress = was + dir;
-  goal.updated = Date.now();
-  const nowDone = goal.progress >= target;
-  let levelUp = false;
-  const msgs = [];
-  if (dir > 0) {
-    g.steps++;
-    const today = todayStr();
-    if (!g.days.includes(today)) g.days.push(today);
-    if (g.days.length > 400) g.days = g.days.slice(-400);
-    g.bestStreak = Math.max(g.bestStreak, currentStreak(g.days));
-    levelUp = addXp(XP_STEP) || levelUp;
-    if (nowDone && !wasDone) {
-      g.wins++;
-      goal.doneAt = Date.now();
-      levelUp = addXp(XP_WIN) || levelUp;
-      msgs.push(goal.reward ? `Hedef tamamlandı, +${XP_STEP + XP_WIN} puan! Ödülün: ${goal.reward}` : `Hedef tamamlandı, +${XP_STEP + XP_WIN} puan!`);
+function renderWord() {
+  const w = data.word;
+  if (!w.cur) w.cur = freshGame();
+  const cur = w.cur;
+  const typed = [...wordInput];
+  const rows = [];
+  for (let r = 0; r < MAX_TRY; r++) {
+    let cells;
+    if (r < cur.guesses.length) {
+      const chars = [...cur.guesses[r]];
+      const sc = scoreGuess(cur.guesses[r], cur.word);
+      cells = chars.map((ch, i) => `<span class="w-t ${sc[i]}">${esc(ch)}</span>`).join("");
+    } else if (r === cur.guesses.length && !cur.done) {
+      cells = Array.from({ length: 5 }, (_, i) => `<span class="w-t ${typed[i] ? "fill" : ""}">${esc(typed[i] || "")}</span>`).join("");
     } else {
-      msgs.push(`+${XP_STEP} puan`);
+      cells = '<span class="w-t"></span>'.repeat(5);
     }
-  } else {
-    g.steps = Math.max(0, g.steps - 1);
-    addXp(-XP_STEP);
-    if (wasDone && !nowDone) {
-      g.wins = Math.max(0, g.wins - 1);
-      addXp(-XP_WIN);
-      delete goal.doneAt;
+    rows.push(`<div class="w-row">${cells}</div>`);
+  }
+  const st = keyStates(cur);
+  const kb = KB.map((row, ri) => `<div class="w-kb">${ri === 2 ? '<button type="button" class="w-k wide" data-wkey="ENTER">Gir</button>' : ""}${[...row].map(l => `<button type="button" class="w-k ${st[l] || ""}" data-wkey="${l}">${l}</button>`).join("")}${ri === 2 ? '<button type="button" class="w-k wide" data-wkey="DEL" aria-label="Sil">⌫</button>' : ""}</div>`).join("");
+  const msg = cur.done
+    ? (cur.won ? `Bildin! Kelime ${cur.word}.` : `Olmadı, kelime ${cur.word}.`)
+    : `${MAX_TRY - cur.guesses.length} hakkın var. Yeşil doğru yerde, sarı yanlış yerde.`;
+  $("wordView").innerHTML = `
+    <header class="view-head">
+      <div class="view-title">
+        <span class="view-icon" aria-hidden="true">${iconSvg("word")}</span>
+        <div><h2>Kelime oyunu</h2><p class="view-sub">${w.played ? `${w.played} oyun, ${w.won} galibiyet, ${w.streak} seri, en iyi ${w.best}` : "5 harfli gizli kelimeyi 6 hakta bul"}</p></div>
+      </div>
+      <div class="view-tools"><button class="btn primary" type="button" data-wnew="1">Yeni kelime</button></div>
+    </header>
+    <div class="w-wrap">
+      <p class="w-msg" role="status">${esc(msg)}</p>
+      <div class="w-grid">${rows.join("")}</div>
+      ${kb}
+    </div>`;
+}
+
+function handleWordKey(k) {
+  const cur = data.word.cur;
+  if (!cur || cur.done) return;
+  if (k === "ENTER") {
+    submitGuess();
+    return;
+  }
+  if (k === "DEL") wordInput = [...wordInput].slice(0, -1).join("");
+  else if ([...wordInput].length < 5) wordInput += k;
+  renderWord();
+}
+
+function submitGuess() {
+  const w = data.word;
+  const cur = w.cur;
+  if ([...wordInput].length < 5) {
+    toast("5 harfli bir kelime yaz");
+    return;
+  }
+  const won = wordInput === cur.word;
+  cur.guesses.push(wordInput);
+  wordInput = "";
+  if (won || cur.guesses.length >= MAX_TRY) {
+    cur.done = true;
+    cur.won = won;
+    w.played++;
+    if (won) {
+      w.won++;
+      w.streak++;
+      w.best = Math.max(w.best, w.streak);
+    } else {
+      w.streak = 0;
     }
-    msgs.push("Bir adım geri alındı");
   }
-  const badges = checkBadges();
-  if (levelUp) {
-    const lv = levelOf(g.xp);
-    msgs.unshift(`Seviye atladın! Seviye ${lv}: ${levelName(lv)}`);
-  }
-  if (badges.length) msgs.push(`Yeni rozet: ${badges.join(", ")}`);
   save();
-  render();
-  toast(msgs.join(". "));
-  if (levelUp) flash($("game"), "levelup");
-  if (nowDone && !wasDone) {
-    const card = document.querySelector(`.goal[data-goal="${CSS.escape(goal.id)}"]`);
-    if (card) flash(card, "win");
+  renderWord();
+  renderHome();
+  if (cur.done) toast(won ? "Tebrikler, buldun!" : `Kelime: ${cur.word}`);
+}
+
+function newWordGame() {
+  const w = data.word;
+  if (w.cur && !w.cur.done && w.cur.guesses.length) {
+    w.played++;
+    w.streak = 0;
   }
+  w.cur = freshGame();
+  wordInput = "";
+  save();
+  renderWord();
+  renderHome();
 }
 
-function flash(el, cls) {
-  if (!el) return;
-  el.classList.remove(cls);
-  void el.offsetWidth;
-  el.classList.add(cls);
-  setTimeout(() => el.classList.remove(cls), 1000);
-}
-
-function renderGame() {
-  const g = data.game;
-  const lv = levelOf(g.xp);
-  const into = g.xp % XP_LEVEL;
-  const streak = currentStreak(g.days);
-  $("game").innerHTML = `
-    <div class="level-badge" aria-hidden="true">${lv}</div>
-    <div>
-      <div class="level-name">Seviye ${lv}: ${esc(levelName(lv))}</div>
-      <div class="level-sub">${g.xp} puan, sonraki seviyeye ${XP_LEVEL - into} puan</div>
-      <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${XP_LEVEL}" aria-valuenow="${into}"><div class="xp-fill" style="width:${(into / XP_LEVEL) * 100}%"></div></div>
-    </div>
-    <div class="streak">
-      <div class="streak-num">${streak}</div>
-      <div class="streak-label">gün seri</div>
-    </div>
-    <div class="badges">${BADGES.map(b => `<span class="badge ${g.badges.includes(b.id) ? "on" : ""}" title="${g.badges.includes(b.id) ? "Kazanıldı" : "Henüz kazanılmadı"}">${esc(b.name)}</span>`).join("")}</div>`;
-}
+document.addEventListener("keydown", e => {
+  if (active !== "word" || !$("login").hidden || document.querySelector("dialog[open]")) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if (e.key === "Enter") {
+    if (t && t.tagName === "BUTTON") return;
+    e.preventDefault();
+    handleWordKey("ENTER");
+  } else if (e.key === "Backspace") {
+    e.preventDefault();
+    handleWordKey("DEL");
+  } else if (e.key.length === 1) {
+    const ch = e.key.toLocaleUpperCase("tr");
+    if (ALPHABET.includes(ch)) handleWordKey(ch);
+  }
+});
 
 function save() {
   try {
@@ -397,7 +417,7 @@ function save() {
 function normalizeData(d) {
   const out = {};
   SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec] : []; });
-  out.game = normalizeGame(d && d.game);
+  out.word = normalizeWord(d && d.word);
   return out;
 }
 
@@ -457,7 +477,7 @@ async function cloudWrite(c, body, keepalive = false) {
 async function cloudCreate(key, body) {
   const res = await fetch(API, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Master-Key": key, "X-Bin-Private": "true", "X-Bin-Name": "Defterim" },
+    headers: { "Content-Type": "application/json", "X-Master-Key": key, "X-Bin-Private": "true", "X-Bin-Name": "Bizee Özel" },
     body: JSON.stringify(body)
   });
   if (!res.ok) throw await responseError(res);
@@ -767,28 +787,6 @@ const templates = {
       ${editBtn("films", f.id)}
     </article>`;
   },
-  goals: g => {
-    const target = Math.max(1, Number(g.target) || 1);
-    const progress = Math.min(Number(g.progress) || 0, target);
-    const done = progress >= target;
-    const pct = Math.round((progress / target) * 100);
-    const unit = g.unit ? " " + esc(g.unit) : "";
-    const late = g.deadline && !done && g.deadline < todayStr();
-    return `<article class="item goal ${done ? "complete" : ""}" data-goal="${esc(g.id)}">
-      <span class="item-title">${esc(g.title)}</span>
-      ${g.deadline ? `<span class="goal-meta ${late ? "plan-date late" : ""}">Son tarih: ${esc(formatDate(g.deadline))}${late ? ", geçti" : ""}</span>` : ""}
-      ${g.reward ? `<p class="goal-reward"><span>Ödül:</span> ${esc(g.reward)}</p>` : ""}
-      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${progress}"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="goal-count">
-        ${done ? `<span class="goal-done">Tamamlandı, ${target}${unit}</span>` : `<strong>${progress} / ${target}${unit}</strong>`}
-        <span class="goal-btns">
-          <button type="button" class="btn small" data-action="step" data-dir="-1" data-sec="goals" data-id="${esc(g.id)}" aria-label="Bir adım geri al" ${progress <= 0 ? "disabled" : ""}>−</button>
-          ${done ? "" : `<button type="button" class="btn small primary" data-action="step" data-dir="1" data-sec="goals" data-id="${esc(g.id)}">+1</button>`}
-        </span>
-      </div>
-      ${editBtn("goals", g.id)}
-    </article>`;
-  },
   favorites: f => `<article class="item fav">
       <div class="item-head"><span class="item-title">${esc(f.title)}</span>${extLink(f.url)}</div>
       ${tags([f.kind])}
@@ -833,8 +831,6 @@ function matches(item, q) {
     .includes(q);
 }
 
-const goalDone = x => (Number(x.progress) || 0) >= Math.max(1, Number(x.target) || 1);
-const goalPct = g => Math.round((Math.min(Number(g.progress) || 0, Math.max(1, Number(g.target) || 1)) / Math.max(1, Number(g.target) || 1)) * 100);
 
 function sorted(sec, items) {
   const list = [...items];
@@ -859,12 +855,6 @@ function sorted(sec, items) {
   if (sec === "films") {
     return list.sort((a, b) => (!!a.watched !== !!b.watched ? (a.watched ? 1 : -1) : byTitle(a, b)));
   }
-  if (sec === "goals") {
-    return list.sort((a, b) => {
-      if (goalDone(a) !== goalDone(b)) return goalDone(a) ? 1 : -1;
-      return (a.created || 0) - (b.created || 0);
-    });
-  }
   return list.sort(byTitle);
 }
 
@@ -872,18 +862,16 @@ function openCountOf(sec) {
   const d = data[sec];
   if (["plans", "growth", "wishlist"].includes(sec)) return d.filter(x => !x.done).length;
   if (sec === "films") return d.filter(f => !f.watched).length;
-  if (sec === "goals") return d.filter(x => !goalDone(x)).length;
   return d.length;
 }
 
 function subtitle(sec) {
+  if (sec === "word") {
+    const w = data.word;
+    return w.played ? `${w.won} galibiyet, ${w.streak} seri` : "Hemen dene";
+  }
   const total = data[sec].length;
   const open = openCountOf(sec);
-  if (sec === "goals") {
-    const lv = levelOf(data.game.xp);
-    const streak = currentStreak(data.game.days);
-    return `Seviye ${lv}${streak ? `, ${streak} gün seri` : ""}`;
-  }
   if (!total) return "Henüz boş";
   switch (sec) {
     case "accounts": return `${total} hesap`;
@@ -930,7 +918,6 @@ function buildViews() {
           <button type="button" class="chip" data-sfilter="Satıldı">Satıldı</button>
         </div>`
       : "";
-    const game = sec === "goals" ? `<div class="game" id="game"></div>` : "";
     return `<section class="view" data-sec="${sec}" hidden>
       <header class="view-head">
         <div class="view-title">
@@ -942,7 +929,7 @@ function buildViews() {
           <button class="btn primary" data-add="${sec}" type="button">${esc(v.add)}</button>
         </div>
       </header>
-      ${filters}${sfilters}${game}
+      ${filters}${sfilters}
       <div class="${STACKS.includes(sec) ? "stack" : "grid"}" id="list-${sec}"></div>
     </section>`;
   }).join("");
@@ -994,18 +981,7 @@ function checkList(sec, items) {
 }
 
 function renderHome() {
-  const lv = levelOf(data.game.xp);
-  const streak = currentStreak(data.game.days);
   const today = todayStr();
-
-  const goals = sorted("goals", data.goals).filter(g => !goalDone(g)).slice(0, 4);
-  const goalCard = `<section class="card" data-tone="goals">
-    <header class="card-head"><span class="card-icon">${iconSvg("goals")}</span><h3>Hedeflerim</h3><button class="icon-btn" type="button" data-add="goals" aria-label="Hedef ekle">+</button></header>
-    ${goals.length
-      ? `<ul class="goal-list">${goals.map(g => `<li class="goal-mini"><div class="goal-mini-top"><span>${esc(g.title)}</span><em>%${goalPct(g)}</em></div><div class="progress slim"><div class="progress-fill" style="width:${goalPct(g)}%"></div></div></li>`).join("")}</ul>`
-      : `<p class="mini-empty">Küçük bir hedefle başla, her adımda puan kazan.</p>`}
-    <button class="link-btn" type="button" data-open="goals">Tüm hedefler →</button>
-  </section>`;
 
   const todayMood = data.mood.find(m => m.date === today);
   const moodCard = `<section class="card" data-tone="mood">
@@ -1038,11 +1014,11 @@ function renderHome() {
           <p class="hero-sub">Bugün harika şeyler başarabilirsin.</p>
         </div>
         <p class="hero-quote">${esc(quoteOf(0))}</p>
-        <button class="hero-chip" type="button" data-open="goals">Seviye ${lv}: ${esc(levelName(lv))}${streak ? `, ${streak} gün seri` : ""}</button>
+        <button class="hero-chip" type="button" data-open="word">Kelime oyunu${data.word.played ? `: ${data.word.won} galibiyet` : ""}</button>
       </div>
     </div>
     <div class="cards four">${["notes", "emails", "accounts", "recipes"].map(miniCard).join("")}</div>
-    <div class="cards three">${goalCard}${moodCard}${quoteCard}</div>
+    <div class="cards two">${moodCard}${quoteCard}</div>
     <h3 class="section-title">Daha fazlası için</h3>
     <div class="tiles">${tiles}</div>`;
 }
@@ -1092,7 +1068,7 @@ function openView(sec, fromUser) {
 
 function render() {
   SECTIONS.forEach(sec => renderSection(sec));
-  renderGame();
+  renderWord();
   renderHome();
   document.querySelectorAll("#saleFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.sfilter === saleFilter)));
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
@@ -1204,6 +1180,15 @@ document.addEventListener("click", e => {
     pickProfile(prof.dataset.profile);
     return;
   }
+  const wk = e.target.closest("[data-wkey]");
+  if (wk) {
+    handleWordKey(wk.dataset.wkey);
+    return;
+  }
+  if (e.target.closest("[data-wnew]")) {
+    newWordGame();
+    return;
+  }
   const open = e.target.closest("[data-open]");
   if (open) {
     openView(open.dataset.open, true);
@@ -1293,8 +1278,6 @@ document.querySelector(".panel").addEventListener("click", e => {
     item.updated = Date.now();
     save();
     render();
-  } else if (action === "step") {
-    stepGoal(item, Number(b.dataset.dir));
   } else if (action === "toggle") {
     item.done = b.checked;
     item.updated = Date.now();
@@ -1347,20 +1330,17 @@ $("editorForm").addEventListener("submit", e => {
   });
   if (!values.title) return;
   const now = Date.now();
-  if (current === "goals") values.target = String(Math.max(1, Math.round(Number(values.target) || 10)));
   if (editingId) {
     const item = data[current].find(x => x.id === editingId);
     if (item) {
       Object.assign(item, values, { updated: now });
-      if (current === "goals" && (Number(item.progress) || 0) > Number(item.target)) item.progress = Number(item.target);
     }
   } else {
     const extras = {
       plans: { done: false },
       growth: { done: false },
       wishlist: { done: false },
-      films: { watched: false, rating: 0 },
-      goals: { progress: 0 }
+      films: { watched: false, rating: 0 }
     };
     data[current].push({ id: newId(), created: now, updated: now, ...(extras[current] || {}), ...values });
   }
