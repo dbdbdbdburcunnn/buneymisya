@@ -1,4 +1,10 @@
 const STORE_KEY = "defterim.data";
+const CLOUD_KEY = "defterim.cloud";
+const DIRTY_KEY = "defterim.dirty";
+const API = "https://api.jsonbin.io/v3/b";
+const DEFAULT_KEY = "$2a$10$SK5kRKhW5Chnu0LRk2v90ONtlnP8GRAJVkgb21zEfkCt.TT0vxL9y";
+const DEFAULT_BIN = "";
+const CLOUD_OFF_KEY = "defterim.cloud.off";
 const SECTIONS = ["accounts", "recipes", "notes", "plans", "films", "goals"];
 const XP_STEP = 10;
 const XP_WIN = 100;
@@ -21,6 +27,10 @@ let current = null;
 let editingId = null;
 let toastTimer = null;
 let filmFilter = "all";
+let cloud = loadCloud();
+let pushTimer = null;
+let pushing = false;
+let pendingPush = false;
 
 const views = {
   accounts: {
@@ -234,9 +244,194 @@ function renderGame() {
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    if (cloud) localStorage.setItem(DIRTY_KEY, "1");
   } catch {
     toast("Kaydedilemedi. Tarayıcı depolaması dolu ya da kapalı olabilir.");
   }
+  schedulePush();
+}
+
+function normalizeData(d) {
+  const out = {};
+  SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec] : []; });
+  out.game = normalizeGame(d && d.game);
+  return out;
+}
+
+function hasContent(d) {
+  return !!d && SECTIONS.some(sec => Array.isArray(d[sec]) && d[sec].length > 0);
+}
+
+function loadCloud() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CLOUD_KEY) || "null");
+    if (c && c.key && c.bin) return c;
+    if (localStorage.getItem(CLOUD_OFF_KEY) === "1") return null;
+  } catch {
+    return null;
+  }
+  return DEFAULT_KEY && DEFAULT_BIN ? { key: DEFAULT_KEY, bin: DEFAULT_BIN } : null;
+}
+
+function storeCloud(c) {
+  cloud = c;
+  try {
+    if (c) {
+      localStorage.setItem(CLOUD_KEY, JSON.stringify(c));
+      localStorage.removeItem(CLOUD_OFF_KEY);
+    } else {
+      localStorage.removeItem(CLOUD_KEY);
+      localStorage.setItem(CLOUD_OFF_KEY, "1");
+    }
+  } catch {}
+}
+
+function autoSetupAllowed() {
+  try { return !!DEFAULT_KEY && localStorage.getItem(CLOUD_OFF_KEY) !== "1"; } catch { return false; }
+}
+
+function markClean() {
+  try { localStorage.removeItem(DIRTY_KEY); } catch {}
+}
+
+function isDirty() {
+  try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch { return false; }
+}
+
+function setStatus(state, text) {
+  const el = $("syncStatus");
+  el.dataset.state = state;
+  el.textContent = text;
+}
+
+function errorText(e) {
+  return e instanceof TypeError ? "İnternet bağlantısı kurulamadı." : e.message;
+}
+
+async function responseError(res) {
+  let m = "";
+  try { m = (await res.json()).message || ""; } catch {}
+  if (res.status === 401) return new Error("API anahtarı hatalı.");
+  if (res.status === 404) return new Error("Bin bulunamadı. Bin ID'yi kontrol et.");
+  if (res.status === 403) return new Error(m || "İzin yok ya da istek hakkın doldu.");
+  return new Error(m || `Sunucu hatası (${res.status}).`);
+}
+
+async function cloudRead(c) {
+  const res = await fetch(`${API}/${encodeURIComponent(c.bin)}/latest`, {
+    headers: { "X-Master-Key": c.key, "X-Bin-Meta": "false" }
+  });
+  if (!res.ok) throw await responseError(res);
+  const j = await res.json();
+  return j && j.record && j.metadata ? j.record : j;
+}
+
+async function cloudWrite(c, body, keepalive = false) {
+  const res = await fetch(`${API}/${encodeURIComponent(c.bin)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-Master-Key": c.key },
+    body: JSON.stringify(body),
+    keepalive
+  });
+  if (!res.ok) throw await responseError(res);
+}
+
+async function cloudCreate(key, body) {
+  const res = await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Master-Key": key, "X-Bin-Private": "true", "X-Bin-Name": "Defterim" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw await responseError(res);
+  const j = await res.json();
+  const id = j && j.metadata && j.metadata.id;
+  if (!id) throw new Error("Bin oluşturulamadı.");
+  return id;
+}
+
+function schedulePush() {
+  if (!cloud) return;
+  pendingPush = true;
+  setStatus("saving", "Kaydediliyor…");
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 1500);
+}
+
+async function pushNow() {
+  if (!cloud || !pendingPush) return;
+  if (pushing) {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 800);
+    return;
+  }
+  pushing = true;
+  pendingPush = false;
+  try {
+    await cloudWrite(cloud, data);
+    markClean();
+    if (!pendingPush) setStatus("ok", "Buluta kaydedildi");
+  } catch (e) {
+    pendingPush = true;
+    setStatus("error", "Buluta kaydedilemedi, bu cihazda duruyor");
+    toast(errorText(e));
+  } finally {
+    pushing = false;
+  }
+}
+
+async function syncOnOpen() {
+  if (!cloud && autoSetupAllowed() && !DEFAULT_BIN) {
+    setStatus("saving", "Bulut hazırlanıyor…");
+    try {
+      const id = await cloudCreate(DEFAULT_KEY, data);
+      storeCloud({ key: DEFAULT_KEY, bin: id });
+      markClean();
+      setStatus("ok", "Buluta bağlı");
+      toast(`Bulut hazır. Bin ID: ${id}`);
+    } catch (e) {
+      setStatus("error", "Buluta ulaşılamadı, bu cihazdakiler gösteriliyor");
+      toast(errorText(e));
+    }
+    return;
+  }
+  if (!cloud) {
+    setStatus("local", "Sadece bu cihazda");
+    return;
+  }
+  if (isDirty() && hasContent(data)) {
+    pendingPush = true;
+    setStatus("saving", "Kaydediliyor…");
+    await pushNow();
+    return;
+  }
+  setStatus("saving", "Buluttan yükleniyor…");
+  try {
+    const rec = await cloudRead(cloud);
+    if (hasContent(rec)) {
+      data = normalizeData(rec);
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      render();
+      setStatus("ok", "Buluta bağlı");
+    } else if (hasContent(data)) {
+      pendingPush = true;
+      await pushNow();
+    } else {
+      setStatus("ok", "Buluta bağlı");
+    }
+  } catch (e) {
+    setStatus("error", "Buluta ulaşılamadı, bu cihazdakiler gösteriliyor");
+    toast(errorText(e));
+  }
+}
+
+function openCloud() {
+  $("cloudKey").value = cloud ? cloud.key : DEFAULT_KEY;
+  $("cloudBin").value = cloud ? cloud.bin : "";
+  $("cloudError").textContent = "";
+  $("cloudDisconnect").hidden = !cloud;
+  $("cloudSubmit").textContent = cloud ? "Kaydet ve eşitle" : "Bağlan";
+  $("cloudDialog").showModal();
+  $("cloudKey").focus();
 }
 
 function esc(s) {
@@ -645,5 +840,83 @@ $("fileInput").addEventListener("change", async e => {
   }
 });
 
+$("syncStatus").addEventListener("click", openCloud);
+$("cloudBtn").addEventListener("click", openCloud);
+$("cloudCancel").addEventListener("click", () => $("cloudDialog").close());
+
+$("cloudDialog").addEventListener("click", e => {
+  const b = e.target.closest('[data-pw="toggle"]');
+  if (!b) return;
+  const input = b.closest(".pw").querySelector("input");
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  b.textContent = show ? "Gizle" : "Göster";
+});
+
+$("cloudDisconnect").addEventListener("click", () => {
+  if (!confirm("Bulut bağlantısı kesilecek. Kayıtların bu cihazda ve JSONBin'de durmaya devam eder. Devam edilsin mi?")) return;
+  storeCloud(null);
+  markClean();
+  pendingPush = false;
+  clearTimeout(pushTimer);
+  setStatus("local", "Sadece bu cihazda");
+  $("cloudDialog").close();
+  toast("Bulut bağlantısı kesildi");
+});
+
+$("cloudForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const key = $("cloudKey").value.trim();
+  const bin = $("cloudBin").value.trim();
+  const err = $("cloudError");
+  const btn = $("cloudSubmit");
+  err.textContent = "";
+  if (!key) return;
+  btn.disabled = true;
+  try {
+    if (!bin) {
+      const id = await cloudCreate(key, data);
+      storeCloud({ key, bin: id });
+      markClean();
+      setStatus("ok", "Buluta kaydedildi");
+      $("cloudDialog").close();
+      toast("Yeni bin oluşturuldu, kayıtların buluta yüklendi.");
+      return;
+    }
+    const c = { key, bin };
+    const rec = await cloudRead(c);
+    if (hasContent(rec)) {
+      if (hasContent(data) && !confirm("Buluttaki kayıtlar bu cihazdakilerin yerine geçecek. Devam edilsin mi?")) return;
+      storeCloud(c);
+      data = normalizeData(rec);
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      markClean();
+      render();
+      setStatus("ok", "Buluta bağlı");
+      toast("Buluttaki kayıtlar yüklendi");
+    } else {
+      storeCloud(c);
+      pendingPush = true;
+      await pushNow();
+      toast("Kayıtların buluta yüklendi");
+    }
+    $("cloudDialog").close();
+  } catch (x) {
+    err.textContent = errorText(x);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+window.addEventListener("online", () => { if (cloud && pendingPush) pushNow(); });
+
+window.addEventListener("pagehide", () => {
+  if (cloud && pendingPush) {
+    clearTimeout(pushTimer);
+    cloudWrite(cloud, data, true).then(markClean).catch(() => {});
+  }
+});
+
 data = load();
 render();
+syncOnOpen();
