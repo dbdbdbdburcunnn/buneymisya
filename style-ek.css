@@ -162,3 +162,9 @@ dialog.confirm h3 { font-family: "Fraunces", Georgia, serif; font-size: 1.5rem; 
 .w-k { flex: 1 1 0; max-width: 2.7rem; min-width: 0; padding: 0.75rem 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 600; font-size: 0.95rem; cursor: pointer; }
 .w-k.wide { flex: 1.6 1 0; max-width: 4.2rem; font-size: 0.8rem; }
 .w-k:hover { border-color: var(--c); }
+
+/* Şifreler kilidi */
+dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
+.lock-icon { color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: 0 0 0 0.55rem color-mix(in srgb, var(--c) 7%, transparent); }
+.lock-pw { margin-top: 1rem; text-align: center; font-size: 1.05rem; }
+.lock-err { color: var(--danger); margin-top: 0.4rem; }
