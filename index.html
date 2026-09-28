@@ -24,6 +24,7 @@
       <a href="#goals">Hedefler</a>
     </nav>
     <input type="search" id="search" placeholder="Her yerde ara" aria-label="Her yerde ara">
+    <button type="button" id="syncStatus" class="sync" data-state="local">Sadece bu cihazda</button>
   </div>
 </header>
 
@@ -83,8 +84,9 @@
   </section>
 
   <footer class="foot">
-    <p>Kayıtlar yalnızca bu tarayıcıda saklanır. Başka bir cihaza taşımak için yedek al.</p>
+    <p>“Kaydet”e bastığın her şey bu tarayıcıya, bulut bağlıysa JSONBin'e de otomatik kaydedilir.</p>
     <div class="foot-actions">
+      <button id="cloudBtn" class="btn" type="button">Bulut ayarları</button>
       <button id="exportBtn" class="btn" type="button">Yedek indir</button>
       <button id="importBtn" class="btn" type="button">Yedek yükle</button>
     </div>
@@ -100,6 +102,28 @@
       <span class="spacer"></span>
       <button type="button" id="cancelBtn" class="btn">Vazgeç</button>
       <button type="submit" class="btn primary">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="cloudDialog">
+  <form id="cloudForm">
+    <h3>Bulut kaydı</h3>
+    <p class="dialog-text">Kayıtların JSONBin'de saklanır, böylece her cihazdan aynı defteri görürsün. Anahtar yalnızca bu tarayıcıda tutulur, koda veya GitHub'a yazılmaz.</p>
+    <label for="cloudKey">API anahtarı (X-Master-Key)</label>
+    <div class="pw">
+      <input id="cloudKey" type="password" autocomplete="off" spellcheck="false" required>
+      <button type="button" class="btn small ghost" data-pw="toggle">Göster</button>
+    </div>
+    <label for="cloudBin">Bin ID</label>
+    <span class="hint">İlk kez kuruyorsan boş bırak, “Bağlan” senin için yeni bir bin oluşturur.</span>
+    <input id="cloudBin" type="text" autocomplete="off" spellcheck="false">
+    <p id="cloudError" class="form-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" id="cloudDisconnect" class="btn danger">Bağlantıyı kes</button>
+      <span class="spacer"></span>
+      <button type="button" id="cloudCancel" class="btn">Vazgeç</button>
+      <button type="submit" id="cloudSubmit" class="btn primary">Bağlan</button>
     </div>
   </form>
 </dialog>
