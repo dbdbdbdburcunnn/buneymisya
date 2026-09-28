@@ -12,25 +12,7 @@
 </head>
 <body>
 
-<section id="lock" class="lock">
-  <div class="lock-box">
-    <h1 class="brand">Defterim</h1>
-    <p id="lockText" class="lock-text"></p>
-    <form id="lockForm" autocomplete="on">
-      <label for="master">Ana şifre</label>
-      <input id="master" type="password" required>
-      <div id="confirmWrap" hidden>
-        <label for="master2">Ana şifre (tekrar)</label>
-        <input id="master2" type="password" autocomplete="new-password">
-      </div>
-      <p id="lockError" class="error" role="alert"></p>
-      <button type="submit" id="lockBtn" class="btn primary"></button>
-    </form>
-    <button id="importFromLock" class="link-btn" type="button">Yedekten geri yükle</button>
-  </div>
-</section>
-
-<div id="app" class="app" hidden>
+<div id="app" class="app">
   <nav class="side" aria-label="Bölümler">
     <h1 class="brand small">Defterim</h1>
     <button class="tab" data-view="recipes">Tarifler <span class="count" id="c-recipes"></span></button>
@@ -39,7 +21,6 @@
     <div class="side-actions">
       <button id="exportBtn" type="button">Yedek indir</button>
       <button id="importBtn" type="button">Yedek yükle</button>
-      <button id="lockNow" type="button">Kilitle</button>
     </div>
   </nav>
 
