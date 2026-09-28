@@ -328,3 +328,9 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
 :root[data-theme="dodom"] .author[data-who="dodom"]::before { background: #8FA8FF; }
 .recipe-body .author { grid-column: 1 / -1; margin: 0 0 0.3rem; }
 .task .author { margin-top: 0.35rem; }
+
+/* Favoriler: türe göre ekleme */
+.fav-adds { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 0.9rem; }
+.fav-adds .btn { border-radius: 999px; color: var(--c); border-color: color-mix(in srgb, var(--c) 30%, var(--line)); background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.fav-adds .btn:hover { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+#favFilters:empty { display: none; }
