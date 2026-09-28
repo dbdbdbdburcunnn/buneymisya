@@ -319,3 +319,12 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
 .lock-icon { color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: 0 0 0 0.55rem color-mix(in srgb, var(--c) 7%, transparent); }
 .lock-pw { margin-top: 1rem; text-align: center; font-size: 1.05rem; }
 .lock-err { color: var(--danger); margin-top: 0.4rem; }
+
+/* Kaydı giren kişi */
+.author { display: flex; align-items: center; gap: 0.4rem; margin: 0.6rem 0 0; color: var(--muted); font-size: 0.8rem; font-weight: 500; }
+.author::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; background: #B5445A; }
+.author[data-who="dodom"]::before { background: #3A56C5; }
+:root[data-theme="dodom"] .author[data-who="burcun"]::before { background: #F08BA3; }
+:root[data-theme="dodom"] .author[data-who="dodom"]::before { background: #8FA8FF; }
+.recipe-body .author { grid-column: 1 / -1; margin: 0 0 0.3rem; }
+.task .author { margin-top: 0.35rem; }
