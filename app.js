@@ -982,13 +982,6 @@ function renderHome() {
   const streak = currentStreak(data.game.days);
   const today = todayStr();
 
-  const todayPlans = sorted("plans", data.plans).filter(p => !p.done && (!p.date || p.date <= today)).slice(0, 5);
-  const planCard = `<section class="card plain" data-tone="plans">
-    <header class="card-head"><span class="card-icon">${iconSvg("plans")}</span><h3>Bugünün planı</h3><button class="icon-btn" type="button" data-add="plans" aria-label="Plan ekle">+</button></header>
-    ${todayPlans.length ? checkList("plans", todayPlans) : `<p class="mini-empty">Bugün için bekleyen plan yok. Kendine zaman ayır ♡</p>`}
-    <button class="link-btn" type="button" data-open="plans">Tüm planlar →</button>
-  </section>`;
-
   const goals = sorted("goals", data.goals).filter(g => !goalDone(g)).slice(0, 4);
   const goalCard = `<section class="card" data-tone="goals">
     <header class="card-head"><span class="card-icon">${iconSvg("goals")}</span><h3>Hedeflerim</h3><button class="icon-btn" type="button" data-add="goals" aria-label="Hedef ekle">+</button></header>
@@ -1031,7 +1024,6 @@ function renderHome() {
         <p class="hero-quote">${esc(quoteOf(0))}</p>
         <button class="hero-chip" type="button" data-open="goals">Seviye ${lv}: ${esc(levelName(lv))}${streak ? `, ${streak} gün seri` : ""}</button>
       </div>
-      ${planCard}
     </div>
     <div class="cards four">${["notes", "emails", "accounts", "recipes"].map(miniCard).join("")}</div>
     <div class="cards three">${goalCard}${moodCard}${quoteCard}</div>
