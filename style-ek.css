@@ -506,3 +506,26 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
   .pet-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pet-bubble { right: 0; max-width: 8.5rem; }
 }
+
+/* Canavarlar: kişiye özel */
+.pet-switch { margin-bottom: 1rem; }
+.pet-card.visiting { border-style: dashed; }
+.pet-visit { display: flex; align-items: center; gap: 0.9rem; }
+.pet-visit .pet-act { flex: 0 0 6rem; }
+.pet-visit p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+.pet-other {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--c) 15%, var(--line));
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.pet-other .pet-svg { width: 2.8rem; animation: none; }
+.pet-other:hover { border-color: var(--c); }
