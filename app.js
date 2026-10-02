@@ -1445,6 +1445,8 @@ function normalizePet(p, def) {
     wear: Object.fromEntries(Object.keys(SLOTS).filter(k => src.wear && SHOP.some(x => x.id === src.wear[k] && x.slot === k && Array.isArray(src.owned) && src.owned.includes(x.id))).map(k => [k, src.wear[k]])),
     weeks: trimWeeks(src.weeks),
     prizeWeek: typeof src.prizeWeek === "string" ? src.prizeWeek : "",
+    meetDay: typeof src.meetDay === "string" ? src.meetDay : "",
+    meets: Number(src.meets) || 0,
     log: Array.isArray(src.log) ? src.log.filter(l => l && l.t).slice(0, 12) : [],
     updated: Number(src.updated) || 0
   };
@@ -2008,9 +2010,117 @@ function petClock(t) {
   return ymd(d) === todayStr() ? time : `${d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })} ${time}`;
 }
 
+const CARE_KEYS = ["feed", "play", "wash"];
+const MEET_XP = 10;
+const MEET_STARS = 5;
+let meetFx = 0;
+
+const caredToday = pet => CARE_KEYS.some(k => petDone(pet)[k]);
+const meetReady = () => Object.keys(PROFILES).every(k => caredToday(data.pets[k]));
+const meetWaiting = () => meetReady() && myPet().meetDay !== todayStr();
+
+function petSwitcher(sel) {
+  return Object.keys(PROFILES).map(k =>
+    `<button type="button" class="chip pet-chip" data-pet-show="${k}" aria-pressed="${k === sel}">${k === profile ? "Benim" : esc(PROFILES[k]) + "'un"}: ${esc(data.pets[k].name)}</button>`
+  ).join("") + `<button type="button" class="chip pet-chip" data-pet-show="meet" aria-pressed="${sel === "meet"}">💞 Buluşma${meetWaiting() ? ' <b class="chip-dot">!</b>' : ""}</button>`;
+}
+
+function meetClaim() {
+  const pet = myPet();
+  const today = todayStr();
+  if (!meetReady() || pet.meetDay === today) return;
+  pet.meetDay = today;
+  pet.meets = (Number(pet.meets) || 0) + 1;
+  pet.xp += MEET_XP;
+  pet.coins += MEET_STARS;
+  addWeek(pet, MEET_XP);
+  const cur = petNow(pet);
+  cur.fun = Math.min(100, cur.fun + 20);
+  PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
+  pet.stats = cur;
+  pet.at = Date.now();
+  const other = otherOf(profile);
+  petLog(`${data.pets[other].name} ile buluştu 💞`);
+  pet.updated = Date.now();
+  meetFx = Date.now() + 2800;
+  save();
+  renderPet();
+  renderHome();
+  setTimeout(() => toast(`Buluşma harika geçti! +${MEET_XP} XP, +${MEET_STARS} ⭐`), 700);
+}
+
+function meetHtml() {
+  const keys = Object.keys(PROFILES);
+  const today = todayStr();
+  const ready = meetReady();
+  const mineDone = myPet().meetDay === today;
+  const together = ready && keys.some(k => data.pets[k].meetDay === today);
+  const go = meetFx > Date.now();
+  const other = otherOf(profile);
+  const meets = Math.max(...keys.map(k => Number(data.pets[k].meets) || 0));
+
+  const pets = keys.map((k, i) => {
+    const p = data.pets[k];
+    const st = petNow(p);
+    return `<div class="meet-pet ${i ? "r" : "l"}">
+      ${petSvg(p, st, together ? "happy" : petMood(st), petStage(p))}
+      <span class="meet-name">${esc(p.name)}</span>
+    </div>`;
+  }).join("");
+  const hearts = together
+    ? Array.from({ length: go ? 14 : 6 }, (_, i) =>
+        `<span class="meet-heart" style="--x:${((i * 37) % 90) - 45}px;--d:${(i * (go ? 0.12 : 0.5)).toFixed(2)}s;--s:${(0.75 + (i % 3) * 0.2).toFixed(2)}" aria-hidden="true">${["💗", "💕", "❤️", "💖"][i % 4]}</span>`
+      ).join("")
+    : "";
+  const status = keys.map(k => {
+    const ok = caredToday(data.pets[k]);
+    return `<span class="meet-check${ok ? " ok" : ""}">${ok ? "✓" : "…"} ${esc(PROFILES[k])} ${ok ? "bugün baktı" : "henüz bakmadı"}</span>`;
+  }).join("");
+
+  let action;
+  if (!ready) {
+    action = `<p class="meet-text">Buluşma için ikinizin de bugün kendi canavarına bakması gerek: beslemek, oynamak ya da yıkamak yeter.</p>`;
+  } else if (!mineDone) {
+    action = `<p class="meet-text">İkiniz de bugün canavarınıza baktınız. ${esc(myPet().name)} ile ${esc(data.pets[other].name)} buluşmaya hazır!</p>
+      <button type="button" class="btn primary meet-btn" data-meet-go="1">💞 Buluştur</button>`;
+  } else {
+    action = `<p class="meet-text">Bugün buluştular! Ödülünü aldın.${data.pets[other].meetDay === today ? "" : ` ${esc(PROFILES[other])} girince o da ödülünü alacak.`}</p>`;
+  }
+
+  return `<section class="meet-card">
+    <div class="meet-scene${together ? " together" : ""}${go ? " go" : ""}">
+      <span class="meet-sun" aria-hidden="true"></span>
+      <span class="meet-cloud c1" aria-hidden="true"></span>
+      <span class="meet-cloud c2" aria-hidden="true"></span>
+      <span class="meet-grass" aria-hidden="true"></span>
+      <span class="meet-flower f1" aria-hidden="true">🌼</span>
+      <span class="meet-flower f2" aria-hidden="true">🌷</span>
+      ${pets}
+      ${hearts}
+    </div>
+    <div class="meet-info">
+      <div class="meet-status">${status}</div>
+      ${action}
+      <p class="pet-hint">Her buluşmada iki canavarın sahibi de +${MEET_XP} XP ve +${MEET_STARS} ⭐ kazanır.${meets ? ` Şimdiye kadar ${meets} kez buluştular.` : ""}</p>
+    </div>
+  </section>`;
+}
+
 function renderPet() {
   const el = $("petView");
   if (!el) return;
+  if (petShow === "meet") {
+    el.innerHTML = `
+      <header class="view-head">
+        <div class="view-title">
+          <span class="view-icon" aria-hidden="true">${iconSvg("pet")}</span>
+          <div><h2>Canavarlarımız</h2><p class="view-sub">Buluşma</p></div>
+        </div>
+      </header>
+      <div class="filters pet-switch" role="group" aria-label="Canavar seç">${petSwitcher("meet")}</div>
+      ${meetHtml()}`;
+    return;
+  }
   const owner = PROFILES[petShow] ? petShow : profile;
   const mine = owner === profile;
   const pet = data.pets[owner];
@@ -2069,9 +2179,7 @@ function renderPet() {
     ? `<ul>${pet.log.slice(0, 8).map(l => `<li>${esc(PROFILES[l.who] || "")} ${esc(l.text)}<time>${esc(petClock(l.t))}</time></li>`).join("")}</ul>`
     : `<p class="mini-empty">${mine ? "Henüz bakım yapılmadı. İlk bakımı sen yap!" : "Henüz bakım yapılmadı."}</p>`;
 
-  const switcher = Object.keys(PROFILES).map(k =>
-    `<button type="button" class="chip pet-chip" data-pet-show="${k}" aria-pressed="${k === owner}">${k === profile ? "Benim" : esc(PROFILES[k]) + "'un"}: ${esc(data.pets[k].name)}</button>`
-  ).join("");
+  const switcher = petSwitcher(owner);
 
   el.innerHTML = `
     <header class="view-head">
@@ -2166,6 +2274,10 @@ async function petClick(e) {
   if (slot) {
     shopSlot = slot.dataset.shopSlot;
     renderPet();
+    return true;
+  }
+  if (e.target.closest("[data-meet-go]")) {
+    meetClaim();
     return true;
   }
   const shop = e.target.closest("[data-shop]");
@@ -3131,6 +3243,7 @@ function renderHome() {
     <header class="card-head"><span class="card-icon">${iconSvg("pet")}</span><h3>${esc(pet.name)}</h3></header>
     <div class="pet-mini">${petSvg(pet, ps, petMood(ps), petStage(pet))}<div><p>${esc(petSays(pet, ps))}</p><p class="mini-empty">${pdone}/${ptasks.length} görev tamam</p></div></div>
     ${others}
+    ${meetWaiting() ? `<button type="button" class="pet-meet-cta" data-open="pet" data-pet-show="meet">💞 Canavarlar buluşmaya hazır!</button>` : ""}
     <button class="link-btn" type="button" data-open="pet" data-pet-show="${profile}">Canavarıma git →</button>
   </section>`;
 
