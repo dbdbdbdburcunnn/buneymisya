@@ -57,6 +57,7 @@ const NAV = [
   { id: "emails", name: "E-posta adresleri", hint: "Kişisel ve önemli e-postalar" },
   { id: "accounts", name: "Şifreler", hint: "Güvenli giriş bilgilerin" },
   { id: "recipes", name: "Tarifler", hint: "Lezzetli tarifler, favorilerin" },
+  { id: "pet", name: "Canavarımız", hint: "Her gün bakım ister" },
   { id: "word", name: "Bulmaca", hint: "Gazete usulü, çözdükçe zorlaşır" },
   { id: "plans", name: "Planlar", hint: "Yapacaklarını listele" },
   { id: "growth", name: "Müzik önerileri", hint: "Dinle, keşfet, paylaş" },
@@ -67,8 +68,8 @@ const NAV = [
   { id: "ideas", name: "Fikir kutusu", hint: "Aklına gelen her şey" },
   { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" }
 ];
-const HOME_TILES = ["word", "growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
-const VIEW_IDS = ["home", "word", ...SECTIONS];
+const HOME_TILES = ["pet", "word", "growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
+const VIEW_IDS = ["home", "pet", "word", ...SECTIONS];
 const nameOf = id => (NAV.find(n => n.id === id) || {}).name || id;
 
 const ICONS = {
@@ -85,6 +86,7 @@ const ICONS = {
   doodle: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.8 2-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3Z"/><path d="M7.5 11h.01M10 7.5h.01M14.5 7.5h.01"/>',
   mood: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.2 4.2 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
   ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
+  pet: '<path d="M7 8.5 5.5 4l4 2.6M17 8.5 18.5 4l-4 2.6"/><path d="M4 14.5a8 7.5 0 0 1 16 0V17a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3Z"/><path d="M9.5 13h.01M14.5 13h.01M10 16.5q2 1.5 4 0"/>',
   wishlist: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9S9 8.5 8.5 6.5 10 4 12 6c2-2 3.5-.5 3.5.5S12 9 12 9Z"/>'
 };
 const iconSvg = id => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ""}</svg>`;
@@ -249,6 +251,7 @@ function load() {
   }
   SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
   d.bulmaca = normalizePuzzle(d.bulmaca);
+  d.pet = normalizePet(d.pet);
   d.deleted = normalizeDeleted(d.deleted);
   delete d.word;
   return d;
@@ -1184,6 +1187,7 @@ function finishPuzzle() {
   P.points += pts;
   P.solved++;
   P.byLevel[cur.lv]++;
+  petMark("puzzle");
   let msg = `Tebrikler, çözdün! +${pts} puan`;
   if (cur.lv === P.unlocked && P.unlocked < LEVELS.length - 1 && P.byLevel[cur.lv] >= UNLOCK_AT) {
     P.unlocked++;
@@ -1363,6 +1367,411 @@ document.addEventListener("keydown", e => {
   }
 });
 
+/* ---------- Canavar ---------- */
+
+const PET_COLORS = ["#8E6FE0", "#F07FA0", "#3FA99D", "#F2A541", "#5B8DEF"];
+const PET_STATS = [
+  { k: "food", name: "Tokluk", icon: "🍓", rate: 4 },
+  { k: "fun", name: "Eğlence", icon: "⚽", rate: 3 },
+  { k: "clean", name: "Temizlik", icon: "🫧", rate: 2 },
+  { k: "energy", name: "Enerji", icon: "💤", rate: 2.5 }
+];
+const PET_ACTIONS = {
+  feed: { label: "Besle", icon: "🍓", fx: ["🍓", "🍪", "🍎"], change: { food: 35 }, says: "besledi", full: "food", fullMsg: "Karnı tok, şimdilik yemek istemiyor" },
+  play: { label: "Oyna", icon: "⚽", fx: ["⚽", "✨", "🎈"], change: { fun: 30, energy: -12 }, says: "oynadı", full: "fun", fullMsg: "Çok eğlendi, biraz dinlensin" },
+  wash: { label: "Yıka", icon: "🫧", fx: ["🫧", "🫧", "🧼"], change: { clean: 45 }, says: "yıkadı", full: "clean", fullMsg: "Zaten tertemiz" },
+  sleep: { label: "Uyut", icon: "💤", fx: ["💤", "🌙", "⭐"], change: { energy: 60 }, says: "uyuttu", full: "energy", fullMsg: "Uykusu yok, enerjisi dolu" }
+};
+const PET_TASKS = [
+  { id: "feed", title: "Canavarı besle", xp: 10 },
+  { id: "play", title: "Canavarla oyna", xp: 10 },
+  { id: "wash", title: "Canavarı yıka", xp: 10 },
+  { id: "mood", title: "Bugün nasıl hissettiğini işaretle", xp: 10, go: "home" },
+  { id: "note", title: "Bir not ya da fikir yaz", xp: 15, go: "notes" },
+  { id: "puzzle", title: "Bir bulmaca çöz", xp: 20, go: "word" },
+  { id: "plan", title: "Bir planı tamamla", xp: 15, go: "plans" }
+];
+const PET_STAGES = ["Bebek canavar", "Minik canavar", "Genç canavar", "Koca canavar"];
+const LEVEL_XP = 100;
+const ALL_DONE_BONUS = 30;
+let petFx = null;
+let petRenaming = false;
+
+function normalizePet(p) {
+  const src = p && typeof p === "object" ? p : {};
+  const st = src.stats && typeof src.stats === "object" ? src.stats : {};
+  const clamp = v => Math.min(100, Math.max(0, Number(v)));
+  return {
+    name: typeof src.name === "string" && src.name.trim() ? src.name.trim().slice(0, 24) : "Pofuduk",
+    color: PET_COLORS.includes(src.color) ? src.color : PET_COLORS[0],
+    xp: Math.max(0, Number(src.xp) || 0),
+    stats: Object.fromEntries(PET_STATS.map(s => [s.k, Number.isFinite(Number(st[s.k])) && st[s.k] !== null ? clamp(st[s.k]) : 80])),
+    at: Number(src.at) || Date.now(),
+    day: typeof src.day === "string" ? src.day : "",
+    done: src.done && typeof src.done === "object" ? src.done : {},
+    streak: Number(src.streak) || 0,
+    lastFull: typeof src.lastFull === "string" ? src.lastFull : "",
+    tasks: Array.isArray(src.tasks) ? src.tasks.filter(t => t && t.id && typeof t.title === "string") : [],
+    log: Array.isArray(src.log) ? src.log.filter(l => l && l.t).slice(0, 12) : [],
+    updated: Number(src.updated) || 0
+  };
+}
+
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return ymd(d);
+}
+
+function petNow(pet) {
+  const h = Math.max(0, (Date.now() - pet.at) / 3600000);
+  const out = {};
+  PET_STATS.forEach(s => { out[s.k] = Math.max(0, Math.min(100, pet.stats[s.k] - s.rate * h)); });
+  return out;
+}
+
+const petDone = pet => (pet.day === todayStr() ? pet.done : {});
+const petAllTasks = pet => [...PET_TASKS, ...pet.tasks.map(t => ({ id: "c:" + t.id, title: t.title, xp: 10, custom: t.id }))];
+const petLevel = pet => 1 + Math.floor(pet.xp / LEVEL_XP);
+const petStage = pet => { const l = petLevel(pet); return l >= 10 ? 3 : l >= 6 ? 2 : l >= 3 ? 1 : 0; };
+const petStreak = pet => (pet.lastFull === todayStr() || pet.lastFull === yesterdayStr() ? pet.streak : 0);
+
+function petMood(stats) {
+  const vals = PET_STATS.map(s => stats[s.k]);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  if (stats.energy < 20) return "sleepy";
+  if (Math.min(...vals) < 8 || avg < 25) return "cry";
+  if (avg < 50) return "sad";
+  if (avg >= 72) return "happy";
+  return "ok";
+}
+
+function petSays(pet, stats) {
+  const low = PET_STATS.filter(s => stats[s.k] < 30).sort((a, b) => stats[a.k] - stats[b.k])[0];
+  if (low) return { food: "Karnım çok acıktı…", fun: "Canım sıkıldı, oynayalım mı?", clean: "Biraz kirlendim, yıkar mısın?", energy: "Uykum geldi…" }[low.k];
+  if (petMood(stats) === "sad") return "Biraz ilgi bekliyorum, beni unutmayın…";
+  const tasks = petAllTasks(pet);
+  const done = petDone(pet);
+  if (tasks.every(t => done[t.id])) return "Bugün harikaydınız, sizi çok seviyorum!";
+  const lines = ["Bugün neler yapıyoruz?", "Yanımda olmanıza bayılıyorum!", "Görevleri birlikte bitirelim!", "Biraz ilgi iyi gelir."];
+  return lines[new Date().getHours() % lines.length];
+}
+
+function petSvg(pet, stats, mood, stage) {
+  const c = pet.color;
+  const s = [0.74, 0.86, 0.96, 1.06][stage];
+  const horn = [0, 12, 18, 25][stage];
+  const ink = "#2B1B22";
+  let eyes, mouth, brows = "", extra = "";
+  if (mood === "sleepy") {
+    eyes = `<path d="M68 108q12 9 24 0M108 108q12 9 24 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+    mouth = `<ellipse cx="100" cy="140" rx="6" ry="7" fill="${ink}"/>`;
+  } else {
+    const py = mood === "sad" || mood === "cry" ? 4 : 0;
+    eyes = [80, 120].map(x => `<circle cx="${x}" cy="106" r="14" fill="#FFFFFF"/><circle cx="${x + 2}" cy="${108 + py}" r="7.5" fill="${ink}"/><circle cx="${x + 5}" cy="${104 + py}" r="2.6" fill="#FFFFFF"/>`).join("");
+    if (mood === "happy") mouth = `<path d="M83 130q17 20 34 0z" fill="#5A1F33"/><path d="M92 139q8 6 16 0" fill="#F07F95"/>`;
+    else if (mood === "ok") mouth = `<path d="M87 134q13 10 26 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+    else mouth = `<path d="M87 142q13-10 26 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+    if (py) brows = `<path d="M66 94l18-7M134 94l-18-7" stroke="${ink}" stroke-width="4.5" stroke-linecap="round"/>`;
+    if (mood === "cry") extra += `<path d="M68 122q-5 11 0 15q5-4 0-15z" fill="#7EC8F2"/><path d="M132 122q-5 11 0 15q5-4 0-15z" fill="#7EC8F2"/>`;
+  }
+  if (stats.clean < 30) extra += `<circle cx="70" cy="152" r="4.5" fill="#7A5A3A" opacity=".5"/><circle cx="128" cy="160" r="5.5" fill="#7A5A3A" opacity=".5"/><circle cx="114" cy="80" r="3.5" fill="#7A5A3A" opacity=".45"/>`;
+  const top = horn
+    ? `<path d="M66 76L${60 - horn * 0.15} ${66 - horn}L84 66Z" fill="#FFE3A3" stroke="#FFE3A3" stroke-width="5" stroke-linejoin="round"/><path d="M134 76L${140 + horn * 0.15} ${66 - horn}L116 66Z" fill="#FFE3A3" stroke="#FFE3A3" stroke-width="5" stroke-linejoin="round"/>`
+    : `<path d="M100 64q-8-16 6-20" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+  return `<svg class="pet-svg" viewBox="0 0 200 200" role="img" aria-label="${esc(pet.name)}">
+    <ellipse cx="100" cy="188" rx="${Math.round(54 * s)}" ry="7" fill="rgba(0,0,0,.13)"/>
+    <g transform="translate(100 186) scale(${s}) translate(-100 -186)">
+      ${top}
+      <ellipse class="pet-arm" cx="40" cy="130" rx="11" ry="17" fill="${c}"/>
+      <ellipse class="pet-arm r" cx="160" cy="130" rx="11" ry="17" fill="${c}"/>
+      <ellipse cx="76" cy="180" rx="16" ry="9" fill="${c}"/>
+      <ellipse cx="124" cy="180" rx="16" ry="9" fill="${c}"/>
+      <ellipse cx="76" cy="182" rx="16" ry="7" fill="#000000" opacity=".12"/>
+      <ellipse cx="124" cy="182" rx="16" ry="7" fill="#000000" opacity=".12"/>
+      <ellipse cx="100" cy="122" rx="64" ry="60" fill="${c}"/>
+      <ellipse cx="100" cy="146" rx="38" ry="30" fill="#FFFFFF" opacity=".28"/>
+      <ellipse cx="78" cy="88" rx="16" ry="8" fill="#FFFFFF" opacity=".22" transform="rotate(-20 78 88)"/>
+      <ellipse cx="64" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
+      <ellipse cx="136" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
+      ${brows}${eyes}${mouth}${extra}
+    </g>
+  </svg>`;
+}
+
+function petLog(text) {
+  const pet = data.pet;
+  pet.log = [{ t: Date.now(), who: profile, text }, ...pet.log].slice(0, 12);
+}
+
+function petMark(key) {
+  const pet = data.pet;
+  const today = todayStr();
+  if (pet.day !== today) {
+    pet.day = today;
+    pet.done = {};
+  }
+  if (pet.done[key]) return false;
+  const tasks = petAllTasks(pet);
+  const task = tasks.find(t => t.id === key);
+  if (!task) return false;
+  const before = petLevel(pet);
+  const stageBefore = petStage(pet);
+  pet.done[key] = { who: profile, t: Date.now() };
+  pet.xp += task.xp;
+  let msg = `Görev tamam: ${task.title} (+${task.xp} XP)`;
+  if (tasks.every(t => pet.done[t.id])) {
+    pet.xp += ALL_DONE_BONUS;
+    pet.streak = pet.lastFull === yesterdayStr() ? pet.streak + 1 : 1;
+    pet.lastFull = today;
+    msg = `Bugünün bütün görevleri tamam! +${ALL_DONE_BONUS} XP bonus`;
+  }
+  if (petLevel(pet) > before) {
+    msg = petStage(pet) > stageBefore
+      ? `${pet.name} büyüdü! Artık bir ${PET_STAGES[petStage(pet)].toLocaleLowerCase("tr")}`
+      : `${pet.name} seviye ${petLevel(pet)} oldu!`;
+  }
+  pet.updated = Date.now();
+  setTimeout(() => toast(msg), 900);
+  return true;
+}
+
+function petUnmark(key) {
+  const pet = data.pet;
+  const done = petDone(pet);
+  if (!done[key]) return;
+  const task = petAllTasks(pet).find(t => t.id === key);
+  if (pet.lastFull === todayStr()) {
+    pet.xp = Math.max(0, pet.xp - ALL_DONE_BONUS);
+    pet.streak = Math.max(0, pet.streak - 1);
+    pet.lastFull = pet.streak ? yesterdayStr() : "";
+  }
+  delete pet.done[key];
+  if (task) pet.xp = Math.max(0, pet.xp - task.xp);
+  pet.updated = Date.now();
+}
+
+function petAction(kind) {
+  const a = PET_ACTIONS[kind];
+  const pet = data.pet;
+  if (!a) return;
+  const cur = petNow(pet);
+  if (cur[a.full] >= 95) {
+    toast(a.fullMsg);
+    return;
+  }
+  Object.entries(a.change).forEach(([k, v]) => { cur[k] = Math.round(Math.max(0, Math.min(100, cur[k] + v)) * 10) / 10; });
+  PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
+  pet.stats = cur;
+  pet.at = Date.now();
+  petLog(a.says);
+  pet.updated = Date.now();
+  if (PET_TASKS.some(t => t.id === kind)) petMark(kind);
+  petFx = { kind, until: Date.now() + 1500 };
+  save();
+  renderPet();
+  renderHome();
+}
+
+function petClock(t) {
+  const d = new Date(t);
+  const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  return ymd(d) === todayStr() ? time : `${d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })} ${time}`;
+}
+
+function renderPet() {
+  const el = $("petView");
+  if (!el) return;
+  const pet = data.pet;
+  const stats = petNow(pet);
+  const mood = petMood(stats);
+  const stage = petStage(pet);
+  const done = petDone(pet);
+  const tasks = petAllTasks(pet);
+  const nDone = tasks.filter(t => done[t.id]).length;
+  const into = pet.xp % LEVEL_XP;
+  const streak = petStreak(pet);
+  const fx = petFx && petFx.until > Date.now() ? petFx : null;
+
+  const fxHtml = fx ? PET_ACTIONS[fx.kind].fx.map((e, i) => `<span class="pet-fx" style="--x:${(i - 1) * 34}px;--d:${i * 0.14}s" aria-hidden="true">${e}</span>`).join("") : "";
+  const statsHtml = PET_STATS.map(s => {
+    const v = Math.round(stats[s.k]);
+    return `<div class="pet-stat${v < 30 ? " low" : ""}">
+      <div class="pet-stat-top"><span>${s.icon} ${esc(s.name)}</span><strong>${v}%</strong></div>
+      <div class="progress"><div class="progress-fill" style="width:${v}%"></div></div>
+    </div>`;
+  }).join("");
+  const actions = Object.entries(PET_ACTIONS).map(([k, a]) =>
+    `<button type="button" class="pet-act" data-pet-act="${k}"><span aria-hidden="true">${a.icon}</span>${esc(a.label)}</button>`
+  ).join("");
+  const swatches = PET_COLORS.map(col =>
+    `<button type="button" class="pet-swatch" style="background:${col}" data-pet-color="${col}" aria-pressed="${col === pet.color}" aria-label="Renk"></button>`
+  ).join("");
+
+  const taskRows = tasks.map(t => {
+    const d = done[t.id];
+    const by = d && PROFILES[d.who] ? `${PROFILES[d.who]} yaptı` : "";
+    if (t.custom) {
+      return `<li class="pet-task${d ? " done" : ""}">
+        <input type="checkbox" class="check" data-pet-task="${esc(t.id)}" ${d ? "checked" : ""} aria-label="Tamamlandı">
+        <span class="pet-task-t"><span>${esc(t.title)}</span><em>${d ? esc(by) : `+${t.xp} XP`}</em></span>
+        <button type="button" class="icon-btn pet-del" data-pet-del="${esc(t.custom)}" aria-label="Görevi sil">×</button>
+      </li>`;
+    }
+    return `<li class="pet-task${d ? " done" : ""}">
+      <span class="pet-tick" aria-hidden="true">${d ? "✓" : ""}</span>
+      <span class="pet-task-t"><span>${esc(t.title)}</span><em>${d ? esc(by) : `+${t.xp} XP`}</em></span>
+      ${!d && t.go ? `<button type="button" class="btn small ghost" data-open="${t.go}">Git</button>` : ""}
+    </li>`;
+  }).join("");
+
+  const log = pet.log.length
+    ? `<ul>${pet.log.slice(0, 8).map(l => `<li>${esc(PROFILES[l.who] || "")} ${esc(l.text)}<time>${esc(petClock(l.t))}</time></li>`).join("")}</ul>`
+    : `<p class="mini-empty">Henüz kimse bakmadı. İlk bakımı sen yap!</p>`;
+
+  el.innerHTML = `
+    <header class="view-head">
+      <div class="view-title">
+        <span class="view-icon" aria-hidden="true">${iconSvg("pet")}</span>
+        <div><h2>Canavarımız</h2><p class="view-sub">Seviye ${petLevel(pet)}, ${esc(PET_STAGES[stage].toLocaleLowerCase("tr"))}${streak ? `. ${streak} günlük seri` : ""}</p></div>
+      </div>
+    </header>
+    <div class="pet-layout">
+      <section class="pet-card">
+        <div class="pet-top">
+          <div><h3 class="pet-name">${esc(pet.name)}</h3><p class="pet-meta">${esc(PET_STAGES[stage])}, seviye ${petLevel(pet)}</p></div>
+          ${petRenaming ? "" : '<button type="button" class="btn small ghost" data-pet="rename">Adını değiştir</button>'}
+        </div>
+        ${petRenaming ? `<form class="pet-rename" data-pet-form="rename" autocomplete="off">
+          <input name="name" maxlength="24" value="${esc(pet.name)}" aria-label="Yeni ad" required>
+          <button type="submit" class="btn small primary">Kaydet</button>
+          <button type="button" class="btn small" data-pet="cancel">Vazgeç</button>
+        </form>` : ""}
+        <div class="pet-stage${fx ? ` act act-${fx.kind}` : ""}">
+          ${petSvg(pet, stats, mood, stage)}
+          <p class="pet-bubble">${esc(petSays(pet, stats))}</p>
+          ${fxHtml}
+        </div>
+        <div class="pet-xp"><div class="progress"><div class="progress-fill" style="width:${into}%"></div></div><span>${into}/${LEVEL_XP} XP</span></div>
+        <div class="pet-stats">${statsHtml}</div>
+        <div class="pet-actions">${actions}</div>
+        <div class="pet-colors" role="group" aria-label="Renk seç">${swatches}</div>
+      </section>
+      <div class="pet-side">
+        <section class="card plain">
+          <header class="card-head"><h3>Bugünün görevleri</h3><span class="pet-count">${nDone}/${tasks.length}</span></header>
+          <div class="progress slim"><div class="progress-fill" style="width:${tasks.length ? (nDone / tasks.length) * 100 : 0}%"></div></div>
+          <ul class="pet-tasklist">${taskRows}</ul>
+          <form class="pet-addtask" data-pet-form="task" autocomplete="off">
+            <input name="title" maxlength="60" placeholder="Kendi görevinizi ekleyin, örn. 2 litre su iç" aria-label="Yeni görev">
+            <button type="submit" class="btn small primary">Ekle</button>
+          </form>
+          <p class="pet-hint">Görevler her gün yenilenir. Hepsini bitirince canavar bonus XP kazanır.</p>
+        </section>
+        <section class="card plain pet-log">
+          <header class="card-head"><h3>Son bakımlar</h3></header>
+          ${log}
+        </section>
+      </div>
+    </div>`;
+}
+
+document.addEventListener("submit", e => {
+  const f = e.target.closest("[data-pet-form]");
+  if (!f) return;
+  e.preventDefault();
+  const pet = data.pet;
+  const v = String(new FormData(f).get(f.dataset.petForm === "rename" ? "name" : "title") || "").trim();
+  if (!v) return;
+  if (f.dataset.petForm === "rename") {
+    pet.name = v.slice(0, 24);
+    petRenaming = false;
+    petLog(`adını “${pet.name}” yaptı`);
+    toast("Yeni adı " + pet.name);
+  } else {
+    pet.tasks.push({ id: newId(), title: v.slice(0, 60), by: profile });
+    toast("Görev eklendi");
+  }
+  pet.updated = Date.now();
+  save();
+  renderPet();
+  renderHome();
+});
+
+async function petClick(e) {
+  const act = e.target.closest("[data-pet-act]");
+  if (act) {
+    petAction(act.dataset.petAct);
+    return true;
+  }
+  const btn = e.target.closest("[data-pet]");
+  if (btn) {
+    petRenaming = btn.dataset.pet === "rename";
+    renderPet();
+    if (petRenaming) {
+      const inp = document.querySelector('[data-pet-form="rename"] input');
+      if (inp) {
+        inp.focus();
+        inp.select();
+      }
+    }
+    return true;
+  }
+  const col = e.target.closest("[data-pet-color]");
+  if (col) {
+    data.pet.color = col.dataset.petColor;
+    data.pet.updated = Date.now();
+    save();
+    renderPet();
+    renderHome();
+    return true;
+  }
+  const task = e.target.closest("[data-pet-task]");
+  if (task) {
+    if (task.checked) petMark(task.dataset.petTask);
+    else petUnmark(task.dataset.petTask);
+    save();
+    renderPet();
+    renderHome();
+    return true;
+  }
+  const del = e.target.closest("[data-pet-del]");
+  if (del) {
+    const t = data.pet.tasks.find(x => x.id === del.dataset.petDel);
+    if (!t || !(await askDelete(t.title))) return true;
+    petUnmark("c:" + t.id);
+    data.pet.tasks = data.pet.tasks.filter(x => x.id !== t.id);
+    data.pet.updated = Date.now();
+    save();
+    renderPet();
+    renderHome();
+    return true;
+  }
+  return false;
+}
+
+function mergePet(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const [n, o] = (Number(b.updated) || 0) > (Number(a.updated) || 0) ? [b, a] : [a, b];
+  if (n === o || !o.day || o.day !== n.day) return n;
+  const extra = Object.keys(o.done || {}).filter(k => !(n.done || {})[k]);
+  if (!extra.length) return n;
+  const all = petAllTasks(n);
+  const m = { ...n, done: { ...n.done }, log: [...n.log] };
+  extra.forEach(k => {
+    const t = all.find(x => x.id === k);
+    if (!t) return;
+    m.done[k] = o.done[k];
+    m.xp += t.xp;
+  });
+  const seen = new Set(m.log.map(l => l.t + ":" + l.who));
+  (o.log || []).forEach(l => { if (!seen.has(l.t + ":" + l.who)) m.log.push(l); });
+  m.log = m.log.sort((x, y) => y.t - x.t).slice(0, 12);
+  m.updated = Math.max(n.updated, o.updated) + 1;
+  return m;
+}
+
 function saveLocal() {
   if (data.bulmaca) data.bulmaca.updated = Date.now();
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch {}
@@ -1394,6 +1803,7 @@ function normalizeData(d) {
   const out = {};
   SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec].filter(x => x && x.id) : []; });
   out.bulmaca = normalizePuzzle(d && d.bulmaca);
+  out.pet = normalizePet(d && d.pet);
   out.deleted = normalizeDeleted(d && d.deleted);
   return out;
 }
@@ -1419,6 +1829,7 @@ function mergeData(a, b) {
   });
   const pa = a.bulmaca, pb = b.bulmaca;
   out.bulmaca = (Number(pb && pb.updated) || 0) > (Number(pa && pa.updated) || 0) ? pb : pa;
+  out.pet = mergePet(a.pet, b.pet);
   out.deleted = deleted;
   return out;
 }
@@ -1426,7 +1837,8 @@ function mergeData(a, b) {
 function sigOf(d) {
   return SECTIONS.map(sec => (d[sec] || []).map(x => x.id + ":" + stampOf(x)).sort().join(",")).join("|") +
     "|" + Object.keys(d.deleted || {}).sort().join(",") +
-    "|" + ((d.bulmaca && d.bulmaca.updated) || 0);
+    "|" + ((d.bulmaca && d.bulmaca.updated) || 0) +
+    "|" + ((d.pet && d.pet.updated) || 0);
 }
 
 function adopt(next) {
@@ -1983,6 +2395,12 @@ function openCountOf(sec) {
 }
 
 function subtitle(sec) {
+  if (sec === "pet") {
+    const pet = data.pet;
+    const t = petAllTasks(pet);
+    const d = t.filter(x => petDone(pet)[x.id]).length;
+    return `${d}/${t.length} görev, seviye ${petLevel(pet)}`;
+  }
   if (sec === "word") {
     const P = data.bulmaca;
     return P.solved ? `${P.solved} çözüldü, ${LEVELS[P.unlocked].name}` : "Hemen başla";
@@ -2053,7 +2471,7 @@ function buildViews() {
       ${filters}${sfilters}${favs}
       <div class="${STACKS.includes(sec) ? "stack" : "grid"}" id="list-${sec}"></div>
     </section>`;
-  }).join("");
+  }).join("") + '<section class="view" data-sec="pet" id="petView" hidden></section>';
 }
 
 function renderSection(sec) {
@@ -2129,7 +2547,15 @@ function renderHome() {
     <button class="link-btn" type="button" data-open="mood">Hissettiklerime git →</button>
   </section>`;
 
-  const quoteCard = `<section class="card quote-card"><p class="script">${esc(quoteOf(3))}</p></section>`;
+  const pet = data.pet;
+  const ps = petNow(pet);
+  const ptasks = petAllTasks(pet);
+  const pdone = ptasks.filter(t => petDone(pet)[t.id]).length;
+  const petCard = `<section class="card" data-tone="pet">
+    <header class="card-head"><span class="card-icon">${iconSvg("pet")}</span><h3>${esc(pet.name)}</h3></header>
+    <div class="pet-mini">${petSvg(pet, ps, petMood(ps), petStage(pet))}<div><p>${esc(petSays(pet, ps))}</p><p class="mini-empty">${pdone}/${ptasks.length} görev tamam</p></div></div>
+    <button class="link-btn" type="button" data-open="pet">Canavara git →</button>
+  </section>`;
 
   const tiles = HOME_TILES.map(id => {
     const n = NAV.find(x => x.id === id);
@@ -2154,7 +2580,7 @@ function renderHome() {
       </div>
     </div>
     <div class="cards four">${["notes", "emails", "accounts", "recipes"].map(miniCard).join("")}</div>
-    <div class="cards two">${moodCard}${quoteCard}</div>
+    <div class="cards two">${petCard}${moodCard}</div>
     <h3 class="section-title">Daha fazlası için</h3>
     <div class="tiles">${tiles}</div>`;
 }
@@ -2169,6 +2595,7 @@ function quickMood(val) {
   } else {
     data.mood.push({ id: newId(), created: now, updated: now, author: profile, title: "Günün ruh hali", date: day, mood: val, body: "", gratitude: "" });
   }
+  petMark("mood");
   save();
   render();
   toast("Günlüğüne eklendi");
@@ -2187,14 +2614,45 @@ function renderSearch(q) {
 
 /* ---------- Gezinme ve çizim ---------- */
 
-function openView(sec, fromUser) {
+let navDepth = 0;
+
+function updateBack() {
+  const b = $("backBtn");
+  if (b) b.hidden = active === "home";
+}
+
+function goBack() {
+  document.body.classList.remove("nav-open");
+  if (active === "search") {
+    $("gsearch").value = "";
+    openView(beforeSearch, false);
+    return;
+  }
+  if (navDepth > 0) {
+    history.back();
+    return;
+  }
+  openView("home", true, true);
+  try { history.replaceState({ sec: "home" }, "", "#home"); } catch {}
+}
+
+function openView(sec, fromUser, fromHistory) {
   if (sec !== "search" && !VIEW_IDS.includes(sec)) sec = "home";
   if (sec === "accounts" && !accountsUnlocked) {
     if (fromUser) askLock().then(ok => { if (ok) openView("accounts", true); });
     if (fromUser) return;
     sec = "home";
   }
+  const prev = active;
   active = sec;
+  if (sec === "pet") petRenaming = false;
+  if (fromUser && !fromHistory && sec !== prev && sec !== "search") {
+    try {
+      history.pushState({ sec }, "", "#" + sec);
+      navDepth++;
+    } catch {}
+  }
+  updateBack();
   if (sec !== "search") {
     try { localStorage.setItem(VIEW_KEY, sec); } catch {}
     if (fromUser) $("gsearch").value = "";
@@ -2210,6 +2668,7 @@ function openView(sec, fromUser) {
 function render() {
   SECTIONS.forEach(sec => renderSection(sec));
   renderWord();
+  renderPet();
   renderHome();
   document.querySelectorAll("#saleFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.sfilter === saleFilter)));
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
@@ -2316,7 +2775,8 @@ function openEditor(sec, item, preset) {
 
 /* ---------- Olaylar ---------- */
 
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
+  if (await petClick(e)) return;
   const prof = e.target.closest("[data-profile]");
   if (prof) {
     pickProfile(prof.dataset.profile);
@@ -2474,6 +2934,7 @@ document.querySelector(".panel").addEventListener("click", e => {
   } else if (action === "toggle") {
     item.done = b.checked;
     item.updated = Date.now();
+    if (sec === "plans" && item.done) petMark("plan");
     save();
     render();
     const say = TOGGLE_MSG[sec] || ["Tamamlandı", "Yeniden açıldı"];
@@ -2536,6 +2997,8 @@ $("editorForm").addEventListener("submit", e => {
       films: { watched: false, rating: 0 }
     };
     data[current].push({ id: newId(), created: now, updated: now, author: profile, ...(extras[current] || {}), ...values });
+    if (current === "notes" || current === "ideas") petMark("note");
+    if (current === "mood" && values.date === todayStr()) petMark("mood");
   }
   save();
   $("editor").close();
@@ -2605,12 +3068,31 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- Başlangıç ---------- */
 
+window.addEventListener("popstate", e => {
+  document.querySelectorAll("dialog[open]").forEach(d => d.close());
+  document.body.classList.remove("nav-open");
+  navDepth = Math.max(0, navDepth - 1);
+  openView((e.state && e.state.sec) || "home", false, true);
+  window.scrollTo(0, 0);
+});
+
 data = load();
+$("menuBtn").insertAdjacentHTML("afterend", '<button class="back-btn" id="backBtn" type="button" aria-label="Geri" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Geri</span></button>');
+$("backBtn").addEventListener("click", goBack);
 buildNav();
 buildViews();
 try { active = localStorage.getItem(VIEW_KEY) || "home"; } catch {}
+const startHash = location.hash.slice(1);
+if (VIEW_IDS.includes(startHash)) active = startHash;
 openView(active, false);
+try { history.replaceState({ sec: active }, "", "#" + active); } catch {}
 render();
 tick();
 setInterval(tick, 30000);
+setInterval(() => {
+  if (document.hidden) return;
+  const pv = $("petView");
+  if (active === "pet" && pv && !pv.contains(document.activeElement)) renderPet();
+  if (active === "home") renderHome();
+}, 300000);
 syncOnOpen();
