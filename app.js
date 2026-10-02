@@ -9,6 +9,8 @@ const BIN_NAME = "Bizee Özel";
 const POLL_MS = 60000;
 const IDLE_MS = 5 * 60000;
 const VIEW_KEY = "defterim.view";
+const SESSION_KEY = "defterim.session";
+const SESSION_MS = 60 * 60000;
 const PROFILES = { burcun: "Burcun", dodom: "Dodom" };
 // Şifreler düz yazı olarak tutulmaz; Ekim1901. anahtarıyla PBKDF2 özeti alınır.
 const PW_SALT = "Ekim1901.";
@@ -2665,7 +2667,35 @@ async function hashPw(pw) {
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function startSession(p) {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ p, until: Date.now() + SESSION_MS })); } catch {}
+}
+
+function readSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    if (s && PROFILES[s.p] && Number(s.until) > Date.now()) return s;
+  } catch {}
+  return null;
+}
+
+function endSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+}
+
+let sessionTouched = 0;
+function touchSession() {
+  if (!$("login").hidden || Date.now() - sessionTouched < 60000) return;
+  if (!readSession()) {
+    showLogin();
+    return;
+  }
+  sessionTouched = Date.now();
+  startSession(profile);
+}
+
 function showLogin() {
+  endSession();
   pendingProfile = null;
   relock();
   $("loginPick").hidden = false;
@@ -2700,6 +2730,7 @@ async function submitLogin(e) {
     const h = await hashPw($("loginPw").value);
     if (h === PW_HASH[pendingProfile]) {
       failCount = 0;
+      startSession(pendingProfile);
       setProfile(pendingProfile);
     } else {
       failCount++;
@@ -3591,6 +3622,7 @@ window.addEventListener("focus", () => { if (!pendingPush) pullNow(); });
   window.addEventListener(ev, () => {
     const wasIdle = Date.now() - lastActive > IDLE_MS;
     lastActive = Date.now();
+    touchSession();
     if (wasIdle && cloud && !pendingPush) pullNow();
   }, { passive: true });
 });
@@ -3661,4 +3693,12 @@ setInterval(() => {
   if (active === "pet" && pv && !pv.contains(document.activeElement)) renderPet();
   if (active === "home") renderHome();
 }, 300000);
+const savedSession = readSession();
+if (savedSession) {
+  startSession(savedSession.p);
+  setProfile(savedSession.p);
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && $("login").hidden && !readSession()) showLogin();
+});
 syncOnOpen();
