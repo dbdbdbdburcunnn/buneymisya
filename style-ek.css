@@ -529,3 +529,103 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
 }
 .pet-other .pet-svg { width: 2.8rem; animation: none; }
 .pet-other:hover { border-color: var(--c); }
+
+/* Birbirimize */
+[data-tone="letters"], .view[data-sec="letters"] { --c: #C2456E; --tint: #FBE4EC; }
+.nav-item { position: relative; }
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #FF5C8A;
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.hero-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip-dot { display: inline-grid; place-items: center; min-width: 1.2rem; height: 1.2rem; margin-left: 0.3rem; padding: 0 0.3rem; border-radius: 999px; background: #FF5C8A; color: #FFFFFF; font-size: 0.72rem; }
+
+.letter-compose { margin-bottom: 1.2rem; }
+.letter-compose textarea { margin-top: 0.2rem; }
+.letter-opts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.6rem 1rem; }
+.letter-date-l { flex: 1 0 100%; margin: 0.3rem 0 -0.3rem; font-weight: 500; font-size: 0.88rem; }
+.letter-date-l .hint { display: inline; margin: 0 0 0 0.3rem; }
+#letterDate { width: auto; flex: 0 1 12rem; }
+.letter-papers { display: flex; gap: 0.45rem; margin-right: auto; }
+.paper-dot { width: 2rem; height: 2rem; padding: 0; border-radius: 50%; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+.paper-dot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--c); }
+
+.letter-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.9rem; }
+.letter {
+  --paper: #FFE9F0;
+  --paper-line: rgba(194, 69, 110, 0.12);
+  position: relative;
+  padding: 1.1rem 1.2rem 0.9rem;
+  border-radius: var(--radius-m);
+  background:
+    repeating-linear-gradient(transparent 0 1.55rem, var(--paper-line) 1.55rem calc(1.55rem + 1px)),
+    var(--paper);
+  color: #3A2430;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 22px rgba(0, 0, 0, 0.08);
+  transform: rotate(-0.4deg);
+}
+.letter:nth-child(even) { transform: rotate(0.5deg); }
+.paper-pink { --paper: #FFE9F0; --paper-line: rgba(194, 69, 110, 0.13); }
+.paper-yellow { --paper: #FFF5D1; --paper-line: rgba(160, 120, 20, 0.15); }
+.paper-blue { --paper: #E3EEFF; --paper-line: rgba(58, 86, 197, 0.14); }
+.paper-dot.paper-pink { background: #FFC9DA; }
+.paper-dot.paper-yellow { background: #FFE58A; }
+.paper-dot.paper-blue { background: #B9D2FF; }
+.letter.unread { box-shadow: 0 0 0 2px #FF5C8A, 0 8px 22px rgba(0, 0, 0, 0.1); }
+.letter.locked { text-align: center; }
+.letter-from { margin: 0 0 0.4rem; font-weight: 700; font-size: 0.92rem; }
+.letter-text { margin: 0; font-family: "Caveat", cursive; font-size: 1.45rem; line-height: 1.55rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.letter.locked .letter-text { font-family: inherit; font-size: 0.92rem; line-height: 1.4; }
+.letter-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin: 0.8rem 0 0; font-size: 0.8rem; color: #7B6A70; }
+.letter-foot span { margin-right: auto; }
+.letter .btn { background: rgba(255, 255, 255, 0.7); color: #3A2430; border-color: rgba(0, 0, 0, 0.08); }
+.letter .btn.danger { background: transparent; color: #C13B3B; }
+.letter .btn.ghost { background: transparent; color: #C2456E; }
+
+dialog.letter-dlg { width: min(26rem, calc(100vw - 2rem)); text-align: left; }
+dialog.letter-dlg form { padding: 1.2rem; }
+.letter-pop { transform: rotate(-1deg); animation: letter-in 0.45s ease-out; }
+.letter-pop .letter-text { font-size: 1.6rem; line-height: 1.7rem; max-height: 50vh; overflow: auto; }
+@keyframes letter-in {
+  from { opacity: 0; transform: translateY(1rem) rotate(-4deg) scale(0.92); }
+  to { opacity: 1; transform: rotate(-1deg); }
+}
+
+/* Mağaza ve haftalık yarışma */
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.6rem, 1fr)); gap: 0.5rem; margin-bottom: 0.2rem; }
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+.shop-item:hover { border-color: var(--c); }
+.shop-item.on { border-color: var(--c); background: var(--tint); }
+.shop-item.poor { opacity: 0.6; }
+.shop-icon { font-size: 1.7rem; line-height: 1; }
+.shop-name { font-size: 0.82rem; font-weight: 600; line-height: 1.2; }
+.shop-price { font-size: 0.78rem; color: var(--c); font-weight: 700; }
+.pet-shop .filters { margin-bottom: 0.2rem; }
+
+.week-row + .week-row { margin-top: 0.7rem; }
+.week-top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.92rem; }
+.week-top em { font-style: normal; color: var(--muted); font-size: 0.8rem; margin-left: 0.2rem; }
+.week-row .progress { height: 0.6rem; margin: 0.3rem 0 0; }
+.week-row.me .week-top span { font-weight: 600; }
+.pet-week .pet-hint { margin-top: 0.4rem; }
