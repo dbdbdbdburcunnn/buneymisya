@@ -1373,7 +1373,8 @@ document.addEventListener("keydown", e => {
 
 /* ---------- Canavar ---------- */
 
-const PET_COLORS = ["#8E6FE0", "#F07FA0", "#3FA99D", "#F2A541", "#5B8DEF"];
+const PET_COLORS = ["#B39BFF", "#FFA3C2", "#6DD8C6", "#FFC56E", "#8DBBFF"];
+const PET_COLORS_OLD = ["#8E6FE0", "#F07FA0", "#3FA99D", "#F2A541", "#5B8DEF"];
 const PET_STATS = [
   { k: "food", name: "Tokluk", icon: "🍓", rate: 4 },
   { k: "fun", name: "Eğlence", icon: "⚽", rate: 3 },
@@ -1403,8 +1404,8 @@ let petFx = null;
 let petRenaming = false;
 let petShow = "";
 const PET_DEFAULTS = {
-  burcun: { name: "Pofuduk", color: "#F07FA0" },
-  dodom: { name: "Boncuk", color: "#5B8DEF" }
+  burcun: { name: "Pofuduk", color: "#FFA3C2" },
+  dodom: { name: "Boncuk", color: "#8DBBFF" }
 };
 const myPet = () => data.pets[profile];
 
@@ -1428,7 +1429,7 @@ function normalizePet(p, def) {
   const clamp = v => Math.min(100, Math.max(0, Number(v)));
   return {
     name: typeof src.name === "string" && src.name.trim() ? src.name.trim().slice(0, 24) : dflt.name,
-    color: PET_COLORS.includes(src.color) ? src.color : dflt.color,
+    color: PET_COLORS.includes(src.color) ? src.color : PET_COLORS_OLD.includes(src.color) ? PET_COLORS[PET_COLORS_OLD.indexOf(src.color)] : dflt.color,
     xp: Math.max(0, Number(src.xp) || 0),
     stats: Object.fromEntries(PET_STATS.map(s => [s.k, Number.isFinite(Number(st[s.k])) && st[s.k] !== null ? clamp(st[s.k]) : 80])),
     at: Number(src.at) || Date.now(),
@@ -1487,47 +1488,107 @@ function petSays(pet, stats, mine = true) {
   return lines[new Date().getHours() % lines.length];
 }
 
+let petSvgSeq = 0;
+
+function mixHex(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const x = p(a), y = p(b);
+  return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+
 function petSvg(pet, stats, mood, stage) {
+  const id = "pg" + (++petSvgSeq);
   const c = pet.color;
+  const light = mixHex(c, "#FFFFFF", 0.5);
+  const belly = mixHex(c, "#FFFFFF", 0.62);
+  const shade = mixHex(c, "#2A1030", 0.18);
+  const line = mixHex(c, "#2A1030", 0.42);
+  const ink = "#2E1A3B";
   const wear = petWear(pet);
-  const s = [0.74, 0.86, 0.96, 1.06][stage];
-  const horn = [0, 12, 18, 25][stage];
-  const ink = "#2B1B22";
-  let eyes, mouth, brows = "", extra = "";
+  const s = [0.8, 0.9, 0.98, 1.05][stage];
+  const sw = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round"`;
+  const happy = mood === "happy";
+
+  const ear = `<path d="M60 86C46 66 44 42 56 34C70 38 82 56 84 70Z" fill="${c}" ${sw}/><path d="M62 74C55 60 54 48 58 43C66 48 73 58 75 66Z" fill="#FFB3C8" opacity=".85"/>`;
+  const ears = `<g class="pet-ear l">${ear}</g><g class="pet-ear r" transform="translate(200 0) scale(-1 1)">${ear}</g>`;
+  const hornSize = [0, 0.75, 1, 1.3][stage];
+  const horn = `<path d="M86 60C83 48 86 38 91 34C95 40 96 50 95 58Z" fill="#FFF1C9" stroke="#E8C77A" stroke-width="2" stroke-linejoin="round"/>`;
+  const top = stage === 0
+    ? `<path d="M100 54C100 46 101 41 103 36" stroke="#4FAE5B" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M103 38C96 29 87 31 85 36C91 41 98 41 103 38Z" fill="#8EDC86" stroke="#4FAE5B" stroke-width="1.6"/><path d="M103 38C108 28 119 28 121 33C115 39 108 41 103 38Z" fill="#6CCB6B" stroke="#4FAE5B" stroke-width="1.6"/>`
+    : `<g transform="translate(91 58) scale(${hornSize}) translate(-91 -58)">${horn}</g><g transform="translate(109 58) scale(${hornSize}) translate(-109 -58) translate(200 0) scale(-1 1)">${horn}</g>`;
+
+  const armY = happy ? 128 : 140;
+  const armRot = happy ? 40 : 18;
+  const arms = `<ellipse class="pet-arm" cx="42" cy="${armY}" rx="9" ry="14" fill="${c}" ${sw} transform="rotate(${armRot} 42 ${armY})"/><ellipse class="pet-arm r" cx="158" cy="${armY}" rx="9" ry="14" fill="${c}" ${sw} transform="rotate(${-armRot} 158 ${armY})"/>`;
+  const foot = x => `<ellipse cx="${x}" cy="180" rx="15" ry="9.5" fill="${shade}" ${sw}/><circle cx="${x - 6}" cy="183" r="2" fill="${light}"/><circle cx="${x}" cy="184.5" r="2" fill="${light}"/><circle cx="${x + 6}" cy="183" r="2" fill="${light}"/>`;
+
+  let eyes = "";
+  let mouth = "";
+  let extra = "";
+  const eyeOpen = (x, sad) => `<g class="pet-eye"><ellipse cx="${x}" cy="118" rx="${stage === 0 ? 14 : 13}" ry="${stage === 0 ? 16 : 15}" fill="url(#${id}e)"/><circle cx="${x + 4.5}" cy="${sad ? 114 : 111.5}" r="5.6" fill="#FFFFFF"/><circle cx="${x - 4.5}" cy="124.5" r="2.6" fill="#FFFFFF" opacity=".9"/>${happy ? `<circle cx="${x + 5}" cy="122" r="1.2" fill="#FFFFFF"/>` : ""}</g>`;
   if (mood === "sleepy") {
-    eyes = `<path d="M68 108q12 9 24 0M108 108q12 9 24 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
-    mouth = `<ellipse cx="100" cy="140" rx="6" ry="7" fill="${ink}"/>`;
+    eyes = `<path d="M65 117q11 9 22 0M113 117q11 9 22 0" stroke="${ink}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`;
+    mouth = `<ellipse cx="100" cy="138" rx="4.5" ry="5.5" fill="#7A2E46"/>`;
+    extra += `<g class="pet-z" fill="${line}" font-family="Figtree, sans-serif" font-weight="800"><text x="146" y="72" font-size="18">z</text><text x="160" y="56" font-size="13">z</text></g>`;
   } else {
-    const py = mood === "sad" || mood === "cry" ? 4 : 0;
-    eyes = [80, 120].map(x => `<circle cx="${x}" cy="106" r="14" fill="#FFFFFF"/><circle cx="${x + 2}" cy="${108 + py}" r="7.5" fill="${ink}"/><circle cx="${x + 5}" cy="${104 + py}" r="2.6" fill="#FFFFFF"/>`).join("");
-    if (mood === "happy") mouth = `<path d="M83 130q17 20 34 0z" fill="#5A1F33"/><path d="M92 139q8 6 16 0" fill="#F07F95"/>`;
-    else if (mood === "ok") mouth = `<path d="M87 134q13 10 26 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
-    else mouth = `<path d="M87 142q13-10 26 0" stroke="${ink}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
-    if (py) brows = `<path d="M66 94l18-7M134 94l-18-7" stroke="${ink}" stroke-width="4.5" stroke-linecap="round"/>`;
-    if (mood === "cry") extra += `<path d="M68 122q-5 11 0 15q5-4 0-15z" fill="#7EC8F2"/><path d="M132 122q-5 11 0 15q5-4 0-15z" fill="#7EC8F2"/>`;
+    const sad = mood === "sad" || mood === "cry";
+    eyes = eyeOpen(76, sad) + eyeOpen(124, sad);
+    if (sad) eyes += `<path d="M64 101L83 96M136 101L117 96" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
+    if (happy) {
+      mouth = `<path d="M90 132Q100 147 110 132Z" fill="#7A2E46" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/><path d="M94.5 139Q100 145 105.5 139Q100 137 94.5 139Z" fill="#FF8FAB"/><path d="M93 132.5l2.6 4.4 2.4-4.4z" fill="#FFFFFF"/>`;
+      extra += `<path class="pet-spark" d="M164 74l2.2 6.2 6.2 2.2-6.2 2.2-2.2 6.2-2.2-6.2-6.2-2.2 6.2-2.2z" fill="#FFD84D"/><path class="pet-spark b" d="M34 92l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4-4.4-1.6 4.4-1.6z" fill="#FFD84D"/>`;
+    } else if (mood === "ok") {
+      mouth = `<path d="M90 134q5 6 10 0q5 6 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M102 134.5l2.2 3.8 2-3.8z" fill="#FFFFFF"/>`;
+    } else if (mood === "sad") {
+      mouth = `<path d="M92 141q8-7 16 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    } else {
+      mouth = `<path d="M89 141q5.5-5 11 0q5.5 5 11 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      extra += `<path d="M66 131q-4 11 0 18q4-7 0-18z" fill="#8FD3FF"/><path d="M134 131q-4 11 0 18q4-7 0-18z" fill="#8FD3FF"/>`;
+    }
   }
-  if (stats.clean < 30) extra += `<circle cx="70" cy="152" r="4.5" fill="#7A5A3A" opacity=".5"/><circle cx="128" cy="160" r="5.5" fill="#7A5A3A" opacity=".5"/><circle cx="114" cy="80" r="3.5" fill="#7A5A3A" opacity=".45"/>`;
-  const top = horn
-    ? `<path d="M66 76L${60 - horn * 0.15} ${66 - horn}L84 66Z" fill="#FFE3A3" stroke="#FFE3A3" stroke-width="5" stroke-linejoin="round"/><path d="M134 76L${140 + horn * 0.15} ${66 - horn}L116 66Z" fill="#FFE3A3" stroke="#FFE3A3" stroke-width="5" stroke-linejoin="round"/>`
-    : `<path d="M100 64q-8-16 6-20" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+  if (stats.clean < 30) {
+    extra += `<ellipse cx="64" cy="156" rx="6" ry="4" fill="#8A6A4A" opacity=".35"/><ellipse cx="134" cy="164" rx="7" ry="4.5" fill="#8A6A4A" opacity=".35"/><ellipse cx="118" cy="76" rx="4" ry="3" fill="#8A6A4A" opacity=".3"/><path d="M150 96q4-6 0-12M158 100q4-6 0-12" stroke="#9AA36A" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>`;
+  }
+
   return `<svg class="pet-svg" viewBox="0 0 200 200" role="img" aria-label="${esc(pet.name)}">
-    <ellipse cx="100" cy="188" rx="${Math.round(54 * s)}" ry="7" fill="rgba(0,0,0,.13)"/>
-    <g transform="translate(100 186) scale(${s}) translate(-100 -186)">
+    <defs>
+      <radialGradient id="${id}b" cx="38%" cy="30%" r="75%">
+        <stop offset="0" stop-color="${light}"/>
+        <stop offset=".55" stop-color="${c}"/>
+        <stop offset="1" stop-color="${shade}"/>
+      </radialGradient>
+      <radialGradient id="${id}k" cx="50%" cy="40%" r="60%">
+        <stop offset="0" stop-color="#FFFFFF" stop-opacity=".9"/>
+        <stop offset="1" stop-color="${belly}" stop-opacity="1"/>
+      </radialGradient>
+      <linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1E1230"/>
+        <stop offset="1" stop-color="#5B3F8C"/>
+      </linearGradient>
+      <radialGradient id="${id}c">
+        <stop offset="0" stop-color="#FF7FA6" stop-opacity=".75"/>
+        <stop offset="1" stop-color="#FF7FA6" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="100" cy="190" rx="${Math.round(56 * s)}" ry="6.5" fill="rgba(40,20,50,.14)"/>
+    <g class="pet-body" transform="translate(100 188) scale(${s}) translate(-100 -188)">
+      <path class="pet-tail" d="M154 164C174 164 184 146 175 136C170 147 163 152 150 152Z" fill="${c}" ${sw}/>
+      ${ears}
       ${top}
-      <ellipse class="pet-arm" cx="40" cy="130" rx="11" ry="17" fill="${c}"/>
-      <ellipse class="pet-arm r" cx="160" cy="130" rx="11" ry="17" fill="${c}"/>
-      <ellipse cx="76" cy="180" rx="16" ry="9" fill="${c}"/>
-      <ellipse cx="124" cy="180" rx="16" ry="9" fill="${c}"/>
-      <ellipse cx="76" cy="182" rx="16" ry="7" fill="#000000" opacity=".12"/>
-      <ellipse cx="124" cy="182" rx="16" ry="7" fill="#000000" opacity=".12"/>
-      <ellipse cx="100" cy="122" rx="64" ry="60" fill="${c}"/>
-      <ellipse cx="100" cy="146" rx="38" ry="30" fill="#FFFFFF" opacity=".28"/>
-      <ellipse cx="78" cy="88" rx="16" ry="8" fill="#FFFFFF" opacity=".22" transform="rotate(-20 78 88)"/>
-      <ellipse cx="64" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
-      <ellipse cx="136" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
-      ${brows}${eyes}${mouth}${extra}
-      ${wear.neck}${wear.eyes}${wear.head}
+      ${foot(78)}${foot(122)}
+      <path d="M100 52C143 52 167 88 167 128C167 164 139 183 100 183C61 183 33 164 33 128C33 88 57 52 100 52Z" fill="url(#${id}b)" ${sw}/>
+      <ellipse cx="100" cy="150" rx="40" ry="30" fill="url(#${id}k)"/>
+      <ellipse cx="72" cy="78" rx="17" ry="9" fill="#FFFFFF" opacity=".38" transform="rotate(-28 72 78)"/>
+      <circle cx="89" cy="70" r="3.2" fill="#FFFFFF" opacity=".5"/>
+      ${arms}
+      <ellipse cx="58" cy="134" rx="13" ry="9" fill="url(#${id}c)"/>
+      <ellipse cx="142" cy="134" rx="13" ry="9" fill="url(#${id}c)"/>
+      ${eyes}${mouth}
+      ${wear.neck}
+      <g transform="translate(100 118) scale(1.2 1.1) translate(-100 -106)">${wear.eyes}</g>
+      <g transform="translate(100 63) scale(1.1) translate(-100 -72)">${wear.head}</g>
     </g>
+    ${extra}
     ${petCrown(pet)}
   </svg>`;
 }
