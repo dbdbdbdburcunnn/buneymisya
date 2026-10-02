@@ -629,3 +629,35 @@ dialog.letter-dlg form { padding: 1.2rem; }
 .week-row .progress { height: 0.6rem; margin: 0.3rem 0 0; }
 .week-row.me .week-top span { font-weight: 600; }
 .pet-week .pet-hint { margin-top: 0.4rem; }
+
+/* Canavar canlılığı */
+.pet-eye { transform-box: fill-box; transform-origin: center; animation: pet-blink 4.8s infinite; }
+.pet-ear { transform-box: fill-box; transform-origin: 70% 100%; animation: pet-ear 3.6s ease-in-out infinite; }
+.pet-ear.r { animation-delay: 0.4s; }
+.pet-tail { transform-box: fill-box; transform-origin: 0% 80%; animation: pet-tail 1.8s ease-in-out infinite; }
+.pet-spark { transform-box: fill-box; transform-origin: center; animation: pet-twinkle 1.8s ease-in-out infinite; }
+.pet-spark.b { animation-delay: 0.9s; }
+.pet-z text { animation: pet-z 2.4s ease-in-out infinite; }
+.pet-z text + text { animation-delay: 1.2s; }
+@keyframes pet-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes pet-ear {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-5deg); }
+}
+@keyframes pet-tail {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-12deg); }
+}
+@keyframes pet-twinkle {
+  0%, 100% { transform: scale(0.6); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+@keyframes pet-z {
+  0% { opacity: 0; transform: translateY(6px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+.pet-other .pet-eye, .pet-other .pet-ear, .pet-other .pet-tail { animation: none; }
