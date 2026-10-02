@@ -17,6 +17,7 @@ const PW_HASH = {
   burcun: "181371d3a4b370e3c5ff72d8e21b7154386659ab9619bd63936d5a199a2e879c",
   dodom: "58a2ecb4e10e322c388cf932c7c168bc64e909a427fa22af03a3fb3791b57d3e"
 };
+const LIST_EXTRA = ["letters"];
 const SECTIONS = [
   "accounts", "recipes", "notes", "plans", "films",
   "emails", "growth", "favorites", "doodle", "mood", "ideas", "wishlist"
@@ -57,6 +58,7 @@ const NAV = [
   { id: "emails", name: "E-posta adresleri", hint: "Kişisel ve önemli e-postalar" },
   { id: "accounts", name: "Şifreler", hint: "Güvenli giriş bilgilerin" },
   { id: "recipes", name: "Tarifler", hint: "Lezzetli tarifler, favorilerin" },
+  { id: "letters", name: "Birbirimize", hint: "Notlar ve sürpriz mektuplar" },
   { id: "pet", name: "Canavarlarımız", hint: "Her gün bakım ister" },
   { id: "word", name: "Bulmaca", hint: "Gazete usulü, çözdükçe zorlaşır" },
   { id: "plans", name: "Planlar", hint: "Yapacaklarını listele" },
@@ -68,8 +70,8 @@ const NAV = [
   { id: "ideas", name: "Fikir kutusu", hint: "Aklına gelen her şey" },
   { id: "wishlist", name: "İstek listem", hint: "Hayali kur, biriktir" }
 ];
-const HOME_TILES = ["pet", "word", "growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
-const VIEW_IDS = ["home", "pet", "word", ...SECTIONS];
+const HOME_TILES = ["letters", "pet", "word", "growth", "films", "favorites", "doodle", "mood", "ideas", "wishlist"];
+const VIEW_IDS = ["home", "letters", "pet", "word", ...SECTIONS];
 const nameOf = id => (NAV.find(n => n.id === id) || {}).name || id;
 
 const ICONS = {
@@ -86,6 +88,7 @@ const ICONS = {
   doodle: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.8 2-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3Z"/><path d="M7.5 11h.01M10 7.5h.01M14.5 7.5h.01"/>',
   mood: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.2 4.2 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
   ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
+  letters: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/><path d="M12 17.5s-2.6-1.6-2.6-3.1c0-.8.6-1.4 1.3-1.4.6 0 1 .3 1.3.8.3-.5.7-.8 1.3-.8.7 0 1.3.6 1.3 1.4 0 1.5-2.6 3.1-2.6 3.1Z"/>',
   pet: '<path d="M7 8.5 5.5 4l4 2.6M17 8.5 18.5 4l-4 2.6"/><path d="M4 14.5a8 7.5 0 0 1 16 0V17a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3Z"/><path d="M9.5 13h.01M14.5 13h.01M10 16.5q2 1.5 4 0"/>',
   wishlist: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9S9 8.5 8.5 6.5 10 4 12 6c2-2 3.5-.5 3.5.5S12 9 12 9Z"/>'
 };
@@ -249,7 +252,7 @@ function load() {
   } catch {
     d = {};
   }
-  SECTIONS.forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
+  [...SECTIONS, ...LIST_EXTRA].forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
   d.bulmaca = normalizePuzzle(d.bulmaca);
   d.pets = normalizePets(d.pets, d.pet);
   delete d.pet;
@@ -1390,7 +1393,8 @@ const PET_TASKS = [
   { id: "mood", title: "Bugün nasıl hissettiğini işaretle", xp: 10, go: "home" },
   { id: "note", title: "Bir not ya da fikir yaz", xp: 15, go: "notes" },
   { id: "puzzle", title: "Bir bulmaca çöz", xp: 20, go: "word" },
-  { id: "plan", title: "Bir planı tamamla", xp: 15, go: "plans" }
+  { id: "plan", title: "Bir planı tamamla", xp: 15, go: "plans" },
+  { id: "letter", title: "Diğerine bir not bırak", xp: 15, go: "letters" }
 ];
 const PET_STAGES = ["Bebek canavar", "Minik canavar", "Genç canavar", "Koca canavar"];
 const LEVEL_XP = 100;
@@ -1433,6 +1437,11 @@ function normalizePet(p, def) {
     streak: Number(src.streak) || 0,
     lastFull: typeof src.lastFull === "string" ? src.lastFull : "",
     tasks: Array.isArray(src.tasks) ? src.tasks.filter(t => t && t.id && typeof t.title === "string") : [],
+    coins: Number.isFinite(Number(src.coins)) && src.coins !== null && src.coins !== undefined ? Math.max(0, Number(src.coins)) : Math.floor((Number(src.xp) || 0) / 5),
+    owned: Array.isArray(src.owned) ? src.owned.filter(id => SHOP.some(x => x.id === id)) : [],
+    wear: Object.fromEntries(Object.keys(SLOTS).filter(k => src.wear && SHOP.some(x => x.id === src.wear[k] && x.slot === k && Array.isArray(src.owned) && src.owned.includes(x.id))).map(k => [k, src.wear[k]])),
+    weeks: trimWeeks(src.weeks),
+    prizeWeek: typeof src.prizeWeek === "string" ? src.prizeWeek : "",
     log: Array.isArray(src.log) ? src.log.filter(l => l && l.t).slice(0, 12) : [],
     updated: Number(src.updated) || 0
   };
@@ -1470,16 +1479,17 @@ function petMood(stats) {
 function petSays(pet, stats, mine = true) {
   const low = PET_STATS.filter(s => stats[s.k] < 30).sort((a, b) => stats[a.k] - stats[b.k])[0];
   if (low) return { food: "Karnım çok acıktı…", fun: "Canım sıkıldı, oynayalım mı?", clean: "Biraz kirlendim, yıkar mısın?", energy: "Uykum geldi…" }[low.k];
-  if (petMood(stats) === "sad") return "Biraz ilgi bekliyorum, beni unutmayın…";
+  if (petMood(stats) === "sad") return "Biraz ilgi bekliyorum, beni unutma…";
   const tasks = petAllTasks(pet);
   const done = petDone(pet);
   if (tasks.every(t => done[t.id])) return mine ? "Bugün harikaydın, seni çok seviyorum!" : "Bugün çok iyi bakıldım!";
-  const lines = ["Bugün neler yapıyoruz?", "Yanımda olmanıza bayılıyorum!", "Görevleri birlikte bitirelim!", "Biraz ilgi iyi gelir."];
+  const lines = ["Bugün neler yapıyoruz?", "Yanımda olmana bayılıyorum!", "Görevleri birlikte bitirelim!", "Biraz ilgi iyi gelir."];
   return lines[new Date().getHours() % lines.length];
 }
 
 function petSvg(pet, stats, mood, stage) {
   const c = pet.color;
+  const wear = petWear(pet);
   const s = [0.74, 0.86, 0.96, 1.06][stage];
   const horn = [0, 12, 18, 25][stage];
   const ink = "#2B1B22";
@@ -1516,8 +1526,334 @@ function petSvg(pet, stats, mood, stage) {
       <ellipse cx="64" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
       <ellipse cx="136" cy="128" rx="9" ry="5.5" fill="#FF8FB0" opacity=".6"/>
       ${brows}${eyes}${mouth}${extra}
+      ${wear.neck}${wear.eyes}${wear.head}
     </g>
+    ${petCrown(pet)}
   </svg>`;
+}
+
+const SHOP = [
+  { id: "party", slot: "head", name: "Parti şapkası", icon: "🎉", price: 40 },
+  { id: "bow", slot: "head", name: "Fiyonk", icon: "🎀", price: 50 },
+  { id: "beanie", slot: "head", name: "Bere", icon: "🧶", price: 70 },
+  { id: "flowers", slot: "head", name: "Çiçek tacı", icon: "🌸", price: 90 },
+  { id: "cowboy", slot: "head", name: "Kovboy şapkası", icon: "🤠", price: 120 },
+  { id: "round", slot: "eyes", name: "Yuvarlak gözlük", icon: "👓", price: 50 },
+  { id: "sun", slot: "eyes", name: "Güneş gözlüğü", icon: "🕶️", price: 80 },
+  { id: "hearts", slot: "eyes", name: "Kalp gözlük", icon: "💖", price: 110 },
+  { id: "bowtie", slot: "neck", name: "Papyon", icon: "👔", price: 45 },
+  { id: "scarf", slot: "neck", name: "Atkı", icon: "🧣", price: 65 },
+  { id: "pearls", slot: "neck", name: "İnci kolye", icon: "📿", price: 130 }
+];
+const SLOTS = { head: "Baş", eyes: "Göz", neck: "Boyun" };
+const ALL_DONE_STARS = 6;
+const WEEK_PRIZE = 30;
+let shopSlot = "head";
+let petSynced = false;
+const starsOf = xp => Math.round(xp / 5);
+
+function weekKey(d = new Date()) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return ymd(x);
+}
+
+function lastWeekKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return weekKey(d);
+}
+
+function trimWeeks(w) {
+  const out = {};
+  Object.keys(w || {}).sort().slice(-8).forEach(k => { out[k] = Number(w[k]) || 0; });
+  return out;
+}
+
+function addWeek(pet, pts, when) {
+  const k = weekKey(when ? new Date(when) : new Date());
+  pet.weeks = trimWeeks({ ...pet.weeks, [k]: Math.max(0, (Number(pet.weeks[k]) || 0) + pts) });
+}
+
+function weekWinner(key) {
+  const sc = Object.keys(PROFILES).map(k => [k, Number((data.pets[k].weeks || {})[key]) || 0]);
+  const max = Math.max(...sc.map(x => x[1]));
+  if (!max) return null;
+  const top = sc.filter(x => x[1] === max);
+  return top.length === 1 ? top[0][0] : "tie";
+}
+
+function claimWeekPrize() {
+  if (!$("login").hidden || (cloud && !petSynced)) return;
+  const pet = myPet();
+  const lw = lastWeekKey();
+  if (pet.prizeWeek === lw || weekWinner(lw) !== profile) return;
+  pet.prizeWeek = lw;
+  pet.coins += WEEK_PRIZE;
+  petLog("haftanın şampiyonu oldu 👑");
+  pet.updated = Date.now();
+  save();
+  renderPet();
+  setTimeout(() => toast(`Geçen haftanın şampiyonu sensin! +${WEEK_PRIZE} ⭐`), 700);
+}
+
+function petWear(pet) {
+  const parts = { head: "", eyes: "", neck: "" };
+  const ink = "#2B1B22";
+  const heart = (cx, cy) => `M${cx} ${cy + 14}C${cx - 26} ${cy - 2} ${cx - 13} ${cy - 23} ${cx} ${cy - 9}C${cx + 13} ${cy - 23} ${cx + 26} ${cy - 2} ${cx} ${cy + 14}Z`;
+  const w = pet.wear || {};
+  const head = {
+    party: `<path d="M82 74L100 26L118 74Z" fill="#FF6B8B"/><path d="M91 52L109 52L113 62L87 62Z" fill="#FFFFFF" opacity=".75"/><circle cx="100" cy="26" r="6.5" fill="#FFD54A"/>`,
+    bow: `<path d="M128 72L108 60L110 86ZM128 72L148 60L146 86Z" fill="#FF5C8A"/><circle cx="128" cy="72" r="6.5" fill="#E0406E"/>`,
+    beanie: `<path d="M64 82Q64 38 100 38Q136 38 136 82Z" fill="#4C7AE0"/><path d="M62 74Q100 64 138 74L138 86Q100 76 62 86Z" fill="#3A62C4"/><circle cx="100" cy="36" r="8" fill="#FFFFFF"/>`,
+    flowers: `<path d="M62 84Q100 54 138 84" stroke="#5DBB63" stroke-width="3.5" fill="none"/>${[[70, 78, "#FF7AA2"], [84, 68, "#FFD54A"], [100, 64, "#7FD1FF"], [116, 68, "#FFD54A"], [130, 78, "#FF7AA2"]].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="7.5" fill="${c}"/><circle cx="${x}" cy="${y}" r="3" fill="#FFFFFF" opacity=".85"/>`).join("")}`,
+    cowboy: `<path d="M78 72Q76 38 92 42Q100 48 108 42Q124 38 122 72Z" fill="#A0683A"/><path d="M78 62h44v8h-44z" fill="#5A3418"/><ellipse cx="100" cy="73" rx="56" ry="9" fill="#8B5A2B"/>`
+  };
+  const eyes = {
+    round: `<circle cx="80" cy="106" r="18" fill="#FFFFFF" fill-opacity=".12" stroke="${ink}" stroke-width="4"/><circle cx="120" cy="106" r="18" fill="#FFFFFF" fill-opacity=".12" stroke="${ink}" stroke-width="4"/><path d="M98 104q2-4 4 0M62 102L46 96M138 102L154 96" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+    sun: `<rect x="59" y="93" width="40" height="27" rx="12" fill="#1E1E2A"/><rect x="101" y="93" width="40" height="27" rx="12" fill="#1E1E2A"/><path d="M99 101h2M59 100L46 95M141 100L154 95" stroke="#1E1E2A" stroke-width="4" stroke-linecap="round"/><path d="M66 100h9M108 100h9" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".5"/>`,
+    hearts: `<path d="${heart(80, 106)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="${heart(120, 106)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="M99 102h2" stroke="#C2185B" stroke-width="3"/>`
+  };
+  const neck = {
+    bowtie: `<path d="M100 166L83 156L83 176ZM100 166L117 156L117 176Z" fill="#3D5AFE"/><circle cx="100" cy="166" r="5.5" fill="#2A3EB1"/>`,
+    scarf: `<path d="M44 146Q100 176 156 146L156 158Q100 190 44 158Z" fill="#E85D4A"/><path d="M118 164L124 196L137 192L129 162Z" fill="#D14836"/><path d="M60 156Q100 178 140 156" stroke="#FFFFFF" stroke-width="3" fill="none" opacity=".5" stroke-dasharray="6 6"/>`,
+    pearls: Array.from({ length: 9 }, (_, i) => {
+      const x = 68 + i * 8;
+      const y = 168 - ((x - 100) / 32) ** 2 * 13;
+      return `<circle cx="${x}" cy="${y.toFixed(1)}" r="4.2" fill="#FFFFFF" stroke="#D9CFE6" stroke-width="1.2"/>`;
+    }).join("")
+  };
+  if (head[w.head]) parts.head = head[w.head];
+  if (eyes[w.eyes]) parts.eyes = eyes[w.eyes];
+  if (neck[w.neck]) parts.neck = neck[w.neck];
+  return parts;
+}
+
+function petCrown(pet) {
+  const owner = Object.keys(data.pets || {}).find(k => data.pets[k] === pet);
+  return owner && weekWinner(lastWeekKey()) === owner
+    ? `<g transform="translate(18 22) rotate(-18)"><path d="M0 22L0 6L8 14L15 2L22 14L30 6L30 22Z" fill="#F5C542" stroke="#D9A21B" stroke-width="2" stroke-linejoin="round"/><circle cx="15" cy="16" r="2.8" fill="#FF4F7B"/></g>`
+    : "";
+}
+
+function shopClick(id) {
+  const pet = myPet();
+  const it = SHOP.find(x => x.id === id);
+  if (!it) return;
+  pet.owned = pet.owned || [];
+  pet.wear = pet.wear || {};
+  if (!pet.owned.includes(id)) {
+    if (pet.coins < it.price) {
+      toast(`${it.price - pet.coins} ⭐ daha lazım. Görevleri yaparak kazanabilirsin.`);
+      return;
+    }
+    pet.coins -= it.price;
+    pet.owned.push(id);
+    pet.wear[it.slot] = id;
+    petLog(`${it.name.toLocaleLowerCase("tr")} aldı`);
+    toast(`${it.name} alındı!`);
+  } else if (pet.wear[it.slot] === id) {
+    delete pet.wear[it.slot];
+  } else {
+    pet.wear[it.slot] = id;
+  }
+  pet.updated = Date.now();
+  petFx = { kind: "play", owner: profile, until: Date.now() + 1000 };
+  save();
+  renderPet();
+  renderHome();
+}
+
+function weekCard(owner) {
+  const key = weekKey();
+  const keys = Object.keys(PROFILES);
+  const scores = keys.map(k => Number((data.pets[k].weeks || {})[key]) || 0);
+  const max = Math.max(1, ...scores);
+  const top = Math.max(...scores);
+  const daysLeft = 7 - ((new Date().getDay() + 6) % 7);
+  const lw = weekWinner(lastWeekKey());
+  const last = !lw ? "" : lw === "tie"
+    ? "Geçen hafta berabere bitti."
+    : `Geçen haftanın şampiyonu: ${esc(data.pets[lw].name)} (${esc(PROFILES[lw])}) 👑`;
+  const rows = keys.map((k, i) => `<div class="week-row${k === owner ? " me" : ""}">
+      <div class="week-top"><span>${top && scores[i] === top ? "👑 " : ""}${esc(data.pets[k].name)} <em>${esc(PROFILES[k])}</em></span><strong>${scores[i]} puan</strong></div>
+      <div class="progress"><div class="progress-fill" style="width:${(scores[i] / max) * 100}%"></div></div>
+    </div>`).join("");
+  return `<section class="card plain pet-week">
+    <header class="card-head"><h3>🏆 Haftalık yarışma</h3><span class="pet-count">${daysLeft === 1 ? "Son gün" : daysLeft + " gün kaldı"}</span></header>
+    ${rows}
+    <p class="pet-hint">Görev puanları pazartesi sıfırlanır. Hafta sonunda önde olan canavar bir hafta taç takar, sahibi ${WEEK_PRIZE} ⭐ kazanır.${last ? " " + last : ""}</p>
+  </section>`;
+}
+
+function shopCard() {
+  const pet = myPet();
+  const wear = pet.wear || {};
+  const owned = pet.owned || [];
+  const tabs = Object.entries(SLOTS).map(([k, v]) =>
+    `<button type="button" class="chip" data-shop-slot="${k}" aria-pressed="${k === shopSlot}">${esc(v)}</button>`
+  ).join("");
+  const items = SHOP.filter(x => x.slot === shopSlot).map(it => {
+    const has = owned.includes(it.id);
+    const on = wear[it.slot] === it.id;
+    const label = on ? "Giyiyor ✓" : has ? "Giy" : `⭐ ${it.price}`;
+    return `<button type="button" class="shop-item${on ? " on" : ""}${!has && pet.coins < it.price ? " poor" : ""}" data-shop="${it.id}">
+      <span class="shop-icon" aria-hidden="true">${it.icon}</span><span class="shop-name">${esc(it.name)}</span><span class="shop-price">${label}</span>
+    </button>`;
+  }).join("");
+  return `<section class="card plain pet-shop">
+    <header class="card-head"><h3>Mağaza</h3><span class="pet-count">⭐ ${pet.coins}</span></header>
+    <div class="filters">${tabs}</div>
+    <div class="shop-grid">${items}</div>
+    <p class="pet-hint">Her görev yıldız kazandırır. Aldığın bir eşyaya tekrar dokunarak çıkarabilirsin.</p>
+  </section>`;
+}
+
+/* ---------- Birbirimize notlar ---------- */
+
+const PAPERS = [["pink", "Pembe"], ["yellow", "Sarı"], ["blue", "Mavi"]];
+let letterTab = "in";
+let letterColor = "pink";
+let letterDraft = "";
+let letterDate = "";
+const letterSkip = new Set();
+
+const otherOf = p => Object.keys(PROFILES).find(k => k !== p);
+const letterOpen = l => !l.openAt || l.openAt <= todayStr();
+const inboxOf = p => data.letters.filter(l => l.to === p);
+const unreadCount = () => inboxOf(profile).filter(l => !l.readAt && letterOpen(l)).length;
+
+function letterCard(l) {
+  const incoming = l.to === profile;
+  const col = PAPERS.some(p => p[0] === l.color) ? l.color : "pink";
+  if (incoming && !letterOpen(l)) {
+    return `<article class="letter paper-${col} locked">
+      <p class="letter-from">🔒 ${esc(PROFILES[l.from])} sana bir sürpriz bıraktı</p>
+      <p class="letter-text">${esc(formatDate(l.openAt))} günü açılacak.</p>
+    </article>`;
+  }
+  const status = incoming ? "" : !letterOpen(l)
+    ? `🔒 ${esc(formatDate(l.openAt))} günü açılacak`
+    : l.readAt ? `Okundu ✓ ${esc(petClock(l.readAt))}` : "Henüz okunmadı";
+  return `<article class="letter paper-${col}${incoming && !l.readAt ? " unread" : ""}">
+    <p class="letter-from">${incoming ? esc(PROFILES[l.from]) + "'dan" : esc(PROFILES[l.to]) + "'a"}</p>
+    <p class="letter-text">${esc(l.text)}</p>
+    <div class="letter-foot">
+      <span>${esc(dateShort(l.created))}${status ? " · " + status : ""}</span>
+      ${incoming && !l.readAt ? `<button type="button" class="btn small" data-letter-read="${esc(l.id)}">Okudum ♡</button>` : ""}
+      ${incoming && l.readAt ? `<button type="button" class="btn small ghost" data-letter-reply="1">Cevap yaz</button>` : ""}
+      ${!incoming ? `<button type="button" class="btn small danger" data-letter-del="${esc(l.id)}">Sil</button>` : ""}
+    </div>
+  </article>`;
+}
+
+function renderLetters() {
+  const el = $("lettersView");
+  if (!el) return;
+  if (!el.dataset.built) {
+    el.dataset.built = "1";
+    el.innerHTML = `
+      <header class="view-head">
+        <div class="view-title">
+          <span class="view-icon" aria-hidden="true">${iconSvg("letters")}</span>
+          <div><h2>Birbirimize</h2><p class="view-sub" id="letterSub"></p></div>
+        </div>
+      </header>
+      <section class="card plain letter-compose">
+        <header class="card-head"><h3 id="letterTo"></h3></header>
+        <textarea id="letterText" rows="4" maxlength="2000" placeholder="Aklından geçenleri yaz…" aria-label="Not"></textarea>
+        <div class="letter-opts">
+          <label class="letter-date-l" for="letterDate">Sürpriz olsun, şu gün açılsın <span class="hint">İsteğe bağlı</span></label>
+          <input type="date" id="letterDate">
+          <div class="letter-papers" role="group" aria-label="Kağıt rengi" id="letterPapers"></div>
+          <button type="button" class="btn primary" data-letter-send="1">Gönder 💌</button>
+        </div>
+      </section>
+      <div class="filters" id="letterTabs" role="group" aria-label="Notlar"></div>
+      <div class="letter-list" id="letterList"></div>`;
+    $("letterText").addEventListener("input", e => { letterDraft = e.target.value; });
+    $("letterDate").addEventListener("input", e => { letterDate = e.target.value; });
+    $("letterDate").min = todayStr();
+  }
+  const other = otherOf(profile);
+  const unread = unreadCount();
+  $("letterTo").textContent = `${PROFILES[other]}'a not bırak`;
+  $("letterSub").textContent = unread ? `${unread} okunmamış notun var` : "Birbirinize notlar ve sürpriz mektuplar";
+  if (document.activeElement !== $("letterText")) $("letterText").value = letterDraft;
+  if (document.activeElement !== $("letterDate")) $("letterDate").value = letterDate;
+  $("letterPapers").innerHTML = PAPERS.map(([k, v]) =>
+    `<button type="button" class="paper-dot paper-${k}" data-letter-paper="${k}" aria-pressed="${k === letterColor}" aria-label="${v} kağıt"></button>`
+  ).join("");
+  const sent = data.letters.filter(l => l.from === profile).length;
+  const got = inboxOf(profile).length;
+  $("letterTabs").innerHTML = `
+    <button type="button" class="chip" data-letter-tab="in" aria-pressed="${letterTab === "in"}">Gelenler (${got})${unread ? ` <b class="chip-dot">${unread}</b>` : ""}</button>
+    <button type="button" class="chip" data-letter-tab="out" aria-pressed="${letterTab === "out"}">Gönderdiklerim (${sent})</button>`;
+  const list = (letterTab === "in" ? inboxOf(profile) : data.letters.filter(l => l.from === profile))
+    .slice()
+    .sort((a, b) => (b.created || 0) - (a.created || 0));
+  $("letterList").innerHTML = list.length
+    ? list.map(letterCard).join("")
+    : `<p class="empty">${letterTab === "in" ? `Henüz ${esc(PROFILES[other])} sana not bırakmadı.` : "Henüz not göndermedin. İlk notu yukarıdan yaz."}</p>`;
+}
+
+function sendLetter() {
+  const text = letterDraft.trim();
+  if (!text) {
+    toast("Önce bir şeyler yaz");
+    $("letterText").focus();
+    return;
+  }
+  const now = Date.now();
+  const to = otherOf(profile);
+  const openAt = letterDate && letterDate > todayStr() ? letterDate : "";
+  data.letters.push({ id: newId(), from: profile, to, text: text.slice(0, 2000), color: letterColor, openAt, created: now, updated: now, readAt: 0 });
+  letterDraft = "";
+  letterDate = "";
+  $("letterText").value = "";
+  $("letterDate").value = "";
+  petMark("letter");
+  save();
+  letterTab = "out";
+  renderLetters();
+  renderPet();
+  renderHome();
+  updateBadges();
+  toast(openAt ? `Sürpriz not ${formatDate(openAt)} günü açılacak` : `${PROFILES[to]} notunu görecek 💌`);
+}
+
+function readLetter(id) {
+  const l = data.letters.find(x => x.id === id);
+  if (!l || l.to !== profile || l.readAt) return;
+  l.readAt = Date.now();
+  l.updated = l.readAt;
+  save();
+  renderLetters();
+  renderHome();
+  updateBadges();
+}
+
+function checkLetters() {
+  if (!$("login").hidden || document.querySelector("dialog[open]")) return;
+  const l = inboxOf(profile)
+    .filter(x => !x.readAt && letterOpen(x) && !letterSkip.has(x.id))
+    .sort((a, b) => (a.created || 0) - (b.created || 0))[0];
+  if (!l) return;
+  const col = PAPERS.some(p => p[0] === l.color) ? l.color : "pink";
+  $("letterPaper").className = "letter letter-pop paper-" + col;
+  $("letterPaper").innerHTML = `<p class="letter-from">💌 ${esc(PROFILES[l.from])} sana not bıraktı</p><p class="letter-text">${esc(l.text)}</p><p class="letter-foot"><span>${esc(dateShort(l.created))}</span></p>`;
+  const d = $("letterBox");
+  d.returnValue = "";
+  d.dataset.id = l.id;
+  d.showModal();
+}
+
+function updateBadges() {
+  const n = data && profile ? unreadCount() : 0;
+  document.querySelectorAll("[data-badge='letters']").forEach(b => {
+    b.textContent = n;
+    b.hidden = !n;
+  });
 }
 
 function petLog(text, pet = myPet()) {
@@ -1539,12 +1875,16 @@ function petMark(key) {
   const stageBefore = petStage(pet);
   pet.done[key] = { who: profile, t: Date.now() };
   pet.xp += task.xp;
-  let msg = `Görev tamam: ${task.title} (+${task.xp} XP)`;
+  pet.coins += starsOf(task.xp);
+  addWeek(pet, task.xp);
+  let msg = `Görev tamam: ${task.title} (+${task.xp} XP, +${starsOf(task.xp)} ⭐)`;
   if (tasks.every(t => pet.done[t.id])) {
     pet.xp += ALL_DONE_BONUS;
+    pet.coins += ALL_DONE_STARS;
+    addWeek(pet, ALL_DONE_BONUS);
     pet.streak = pet.lastFull === yesterdayStr() ? pet.streak + 1 : 1;
     pet.lastFull = today;
-    msg = `Bugünün bütün görevleri tamam! +${ALL_DONE_BONUS} XP bonus`;
+    msg = `Bugünün bütün görevleri tamam! +${ALL_DONE_BONUS} XP, +${ALL_DONE_STARS} ⭐ bonus`;
   }
   if (petLevel(pet) > before) {
     msg = petStage(pet) > stageBefore
@@ -1563,11 +1903,17 @@ function petUnmark(key) {
   const task = petAllTasks(pet).find(t => t.id === key);
   if (pet.lastFull === todayStr()) {
     pet.xp = Math.max(0, pet.xp - ALL_DONE_BONUS);
+    pet.coins = Math.max(0, pet.coins - ALL_DONE_STARS);
+    addWeek(pet, -ALL_DONE_BONUS);
     pet.streak = Math.max(0, pet.streak - 1);
     pet.lastFull = pet.streak ? yesterdayStr() : "";
   }
   delete pet.done[key];
-  if (task) pet.xp = Math.max(0, pet.xp - task.xp);
+  if (task) {
+    pet.xp = Math.max(0, pet.xp - task.xp);
+    pet.coins = Math.max(0, pet.coins - starsOf(task.xp));
+    addWeek(pet, -task.xp);
+  }
   pet.updated = Date.now();
 }
 
@@ -1675,7 +2021,7 @@ function renderPet() {
     <div class="pet-layout">
       <section class="pet-card${mine ? "" : " visiting"}">
         <div class="pet-top">
-          <div><h3 class="pet-name">${esc(pet.name)}</h3><p class="pet-meta">${esc(ownerName)}'un ${esc(PET_STAGES[stage].toLocaleLowerCase("tr"))}ı, seviye ${petLevel(pet)}</p></div>
+          <div><h3 class="pet-name">${esc(pet.name)}</h3><p class="pet-meta">⭐ ${pet.coins} · ${esc(ownerName)}'un ${esc(PET_STAGES[stage].toLocaleLowerCase("tr"))}ı, seviye ${petLevel(pet)}</p></div>
           ${mine && !petRenaming ? '<button type="button" class="btn small ghost" data-pet="rename">Adını değiştir</button>' : ""}
         </div>
         ${mine && petRenaming ? `<form class="pet-rename" data-pet-form="rename" autocomplete="off">
@@ -1694,8 +2040,9 @@ function renderPet() {
         ${swatches}
       </section>
       <div class="pet-side">
+        ${weekCard(owner)}
         <section class="card plain">
-          <header class="card-head"><h3>${mine ? "Bugünün görevlerin" : esc(ownerName) + "'un bugünkü görevleri"}</h3><span class="pet-count">${nDone}/${tasks.length}</span></header>
+          <header class="card-head"><h3>${mine ? "Bugünkü görevlerin" : esc(ownerName) + "'un bugünkü görevleri"}</h3><span class="pet-count">${nDone}/${tasks.length}</span></header>
           <div class="progress slim"><div class="progress-fill" style="width:${tasks.length ? (nDone / tasks.length) * 100 : 0}%"></div></div>
           <ul class="pet-tasklist">${taskRows}</ul>
           ${mine ? `<form class="pet-addtask" data-pet-form="task" autocomplete="off">
@@ -1704,6 +2051,7 @@ function renderPet() {
           </form>
           <p class="pet-hint">Görevler her gün yenilenir. Hepsini bitirince canavarın bonus XP kazanır.</p>` : ""}
         </section>
+        ${mine ? shopCard() : ""}
         <section class="card plain pet-log">
           <header class="card-head"><h3>Son olanlar</h3></header>
           ${log}
@@ -1751,6 +2099,55 @@ function petLove(owner) {
 }
 
 async function petClick(e) {
+  const slot = e.target.closest("[data-shop-slot]");
+  if (slot) {
+    shopSlot = slot.dataset.shopSlot;
+    renderPet();
+    return true;
+  }
+  const shop = e.target.closest("[data-shop]");
+  if (shop) {
+    shopClick(shop.dataset.shop);
+    return true;
+  }
+  const lt = e.target.closest("[data-letter-tab]");
+  if (lt) {
+    letterTab = lt.dataset.letterTab;
+    renderLetters();
+    return true;
+  }
+  const lp = e.target.closest("[data-letter-paper]");
+  if (lp) {
+    letterColor = lp.dataset.letterPaper;
+    renderLetters();
+    return true;
+  }
+  if (e.target.closest("[data-letter-send]")) {
+    sendLetter();
+    return true;
+  }
+  if (e.target.closest("[data-letter-reply]")) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    $("letterText").focus({ preventScroll: true });
+    return true;
+  }
+  const lr = e.target.closest("[data-letter-read]");
+  if (lr) {
+    readLetter(lr.dataset.letterRead);
+    return true;
+  }
+  const ld = e.target.closest("[data-letter-del]");
+  if (ld) {
+    const l = data.letters.find(x => x.id === ld.dataset.letterDel);
+    if (!l || l.from !== profile) return true;
+    if (!(await askDelete(l.text.slice(0, 40) + (l.text.length > 40 ? "…" : "")))) return true;
+    data.deleted[l.id] = Date.now();
+    data.letters = data.letters.filter(x => x.id !== l.id);
+    save();
+    renderLetters();
+    renderHome();
+    return true;
+  }
   const show = e.target.closest("[data-pet-show]");
   if (show) {
     petShow = show.dataset.petShow;
@@ -1828,6 +2225,10 @@ function mergePet(a, b) {
     if (!t) return;
     m.done[k] = o.done[k];
     m.xp += t.xp;
+    m.coins = (m.coins || 0) + starsOf(t.xp);
+    m.weeks = { ...m.weeks };
+    const wk = weekKey(new Date(o.done[k].t || Date.now()));
+    m.weeks[wk] = (Number(m.weeks[wk]) || 0) + t.xp;
   });
   const seen = new Set(m.log.map(l => l.t + ":" + l.who));
   (o.log || []).forEach(l => { if (!seen.has(l.t + ":" + l.who)) m.log.push(l); });
@@ -1865,7 +2266,7 @@ function normalizeDeleted(d) {
 
 function normalizeData(d) {
   const out = {};
-  SECTIONS.forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec].filter(x => x && x.id) : []; });
+  [...SECTIONS, ...LIST_EXTRA].forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec].filter(x => x && x.id) : []; });
   out.bulmaca = normalizePuzzle(d && d.bulmaca);
   out.pets = normalizePets(d && d.pets, d && d.pet);
   out.deleted = normalizeDeleted(d && d.deleted);
@@ -1882,7 +2283,7 @@ function mergeData(a, b) {
   const deleted = normalizeDeleted(a.deleted);
   Object.entries(normalizeDeleted(b.deleted)).forEach(([id, t]) => { deleted[id] = Math.max(deleted[id] || 0, t); });
   const out = {};
-  SECTIONS.forEach(sec => {
+  [...SECTIONS, ...LIST_EXTRA].forEach(sec => {
     const m = new Map();
     [...(a[sec] || []), ...(b[sec] || [])].forEach(x => {
       if (!x || !x.id || deleted[x.id]) return;
@@ -1900,7 +2301,7 @@ function mergeData(a, b) {
 }
 
 function sigOf(d) {
-  return SECTIONS.map(sec => (d[sec] || []).map(x => x.id + ":" + stampOf(x)).sort().join(",")).join("|") +
+  return [...SECTIONS, ...LIST_EXTRA].map(sec => (d[sec] || []).map(x => x.id + ":" + stampOf(x)).sort().join(",")).join("|") +
     "|" + Object.keys(d.deleted || {}).sort().join(",") +
     "|" + ((d.bulmaca && d.bulmaca.updated) || 0) +
     "|" + Object.keys(PROFILES).map(k => (d.pets && d.pets[k] && d.pets[k].updated) || 0).join(",");
@@ -1917,6 +2318,7 @@ function adopt(next) {
   }
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch {}
   render();
+  checkLetters();
   return true;
 }
 
@@ -2106,6 +2508,9 @@ async function syncOnOpen() {
   } else {
     await pullNow();
   }
+  petSynced = true;
+  claimWeekPrize();
+  checkLetters();
   startPolling();
 }
 
@@ -2261,6 +2666,8 @@ function setProfile(p) {
   $("loginPw").value = "";
   render();
   window.scrollTo(0, 0);
+  claimWeekPrize();
+  setTimeout(checkLetters, 400);
 }
 
 /* ---------- Kart şablonları ---------- */
@@ -2462,6 +2869,10 @@ function openCountOf(sec) {
 }
 
 function subtitle(sec) {
+  if (sec === "letters") {
+    const n = unreadCount();
+    return n ? `${n} okunmamış not` : data.letters.length ? `${data.letters.length} not` : "Henüz boş";
+  }
   if (sec === "pet") {
     const pet = myPet();
     const t = petAllTasks(pet);
@@ -2499,7 +2910,7 @@ function subtitle(sec) {
 
 function buildNav() {
   $("nav").innerHTML = NAV.map(n =>
-    `<button class="nav-item" type="button" data-open="${n.id}">${iconSvg(n.id)}<span>${esc(n.name)}</span></button>`
+    `<button class="nav-item" type="button" data-open="${n.id}">${iconSvg(n.id)}<span>${esc(n.name)}</span>${n.id === "letters" ? '<b class="nav-badge" data-badge="letters" hidden></b>' : ""}</button>`
   ).join("");
 }
 
@@ -2538,7 +2949,7 @@ function buildViews() {
       ${filters}${sfilters}${favs}
       <div class="${STACKS.includes(sec) ? "stack" : "grid"}" id="list-${sec}"></div>
     </section>`;
-  }).join("") + '<section class="view" data-sec="pet" id="petView" hidden></section>';
+  }).join("") + '<section class="view" data-sec="pet" id="petView" hidden></section><section class="view" data-sec="letters" id="lettersView" hidden></section>';
 }
 
 function renderSection(sec) {
@@ -2650,7 +3061,10 @@ function renderHome() {
           <p class="hero-sub">Bugün harika şeyler başarabilirsin.</p>
         </div>
         <p class="hero-quote">${esc(quoteOf(0))}</p>
-        <button class="hero-chip" type="button" data-open="word">Bulmaca${solved ? `: ${solved} çözüldü` : ""}</button>
+        <div class="hero-chips">
+          ${unreadCount() ? `<button class="hero-chip" type="button" data-open="letters">💌 ${unreadCount()} yeni not</button>` : ""}
+          <button class="hero-chip" type="button" data-open="word">Bulmaca${solved ? `: ${solved} çözüldü` : ""}</button>
+        </div>
       </div>
     </div>
     <div class="cards four">${["notes", "emails", "accounts", "recipes"].map(miniCard).join("")}</div>
@@ -2743,7 +3157,9 @@ function render() {
   SECTIONS.forEach(sec => renderSection(sec));
   renderWord();
   renderPet();
+  renderLetters();
   renderHome();
+  updateBadges();
   document.querySelectorAll("#saleFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.sfilter === saleFilter)));
   document.querySelectorAll("#filmFilters .chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.filter === filmFilter)));
 }
@@ -3153,6 +3569,21 @@ window.addEventListener("popstate", e => {
 data = load();
 $("menuBtn").insertAdjacentHTML("afterend", '<button class="back-btn" id="backBtn" type="button" aria-label="Geri" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Geri</span></button>');
 $("backBtn").addEventListener("click", goBack);
+document.body.insertAdjacentHTML("beforeend", `<dialog id="letterBox" class="confirm letter-dlg">
+  <form method="dialog">
+    <div id="letterPaper"></div>
+    <div class="confirm-actions">
+      <button type="submit" value="later" class="btn">Sonra</button>
+      <button type="submit" value="read" class="btn primary">Okudum ♡</button>
+    </div>
+  </form>
+</dialog>`);
+$("letterBox").addEventListener("close", () => {
+  const d = $("letterBox");
+  if (d.returnValue === "read") readLetter(d.dataset.id);
+  else letterSkip.add(d.dataset.id);
+  setTimeout(checkLetters, 350);
+});
 buildNav();
 buildViews();
 try { active = localStorage.getItem(VIEW_KEY) || "home"; } catch {}
