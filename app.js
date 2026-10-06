@@ -19,7 +19,7 @@ const PW_HASH = {
   burcun: "181371d3a4b370e3c5ff72d8e21b7154386659ab9619bd63936d5a199a2e879c",
   dodom: "58a2ecb4e10e322c388cf932c7c168bc64e909a427fa22af03a3fb3791b57d3e"
 };
-const LIST_EXTRA = ["letters"];
+const LIST_EXTRA = ["letters", "emojis"];
 const SECTIONS = [
   "accounts", "recipes", "notes", "plans", "films",
   "emails", "growth", "favorites", "doodle", "mood", "ideas", "wishlist"
@@ -61,7 +61,7 @@ const NAV = [
   { id: "accounts", name: "Şifreler", hint: "Güvenli giriş bilgilerin" },
   { id: "recipes", name: "Tarifler", hint: "Lezzetli tarifler, favorilerin" },
   { id: "letters", name: "Birbirimize", hint: "Notlar ve sürpriz mektuplar" },
-  { id: "pet", name: "Canavarlarımız", hint: "Her gün bakım ister" },
+  { id: "pet", name: "Petlerimiz", hint: "Ördeğin ya da maymunun seni bekliyor" },
   { id: "word", name: "Bulmaca", hint: "Gazete usulü, çözdükçe zorlaşır" },
   { id: "plans", name: "Planlar", hint: "Yapacaklarını listele" },
   { id: "growth", name: "Müzik önerileri", hint: "Dinle, keşfet, paylaş" },
@@ -91,7 +91,7 @@ const ICONS = {
   mood: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.2 4.2 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
   ideas: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/>',
   letters: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/><path d="M12 17.5s-2.6-1.6-2.6-3.1c0-.8.6-1.4 1.3-1.4.6 0 1 .3 1.3.8.3-.5.7-.8 1.3-.8.7 0 1.3.6 1.3 1.4 0 1.5-2.6 3.1-2.6 3.1Z"/>',
-  pet: '<path d="M7 8.5 5.5 4l4 2.6M17 8.5 18.5 4l-4 2.6"/><path d="M4 14.5a8 7.5 0 0 1 16 0V17a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3Z"/><path d="M9.5 13h.01M14.5 13h.01M10 16.5q2 1.5 4 0"/>',
+  pet: '<circle cx="6.5" cy="10" r="2"/><circle cx="10" cy="6" r="2"/><circle cx="14" cy="6" r="2"/><circle cx="17.5" cy="10" r="2"/><path d="M12 12c-3 0-6 3.6-6 6.2 0 1.5 1.2 2.4 2.7 2.1 1.2-.3 2.2-.7 3.3-.7s2.1.4 3.3.7c1.5.3 2.7-.6 2.7-2.1 0-2.6-3-6.2-6-6.2Z"/>',
   wishlist: '<rect x="3.5" y="9" width="17" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9S9 8.5 8.5 6.5 10 4 12 6c2-2 3.5-.5 3.5.5S12 9 12 9Z"/>'
 };
 const iconSvg = id => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ""}</svg>`;
@@ -256,7 +256,8 @@ function load() {
   }
   [...SECTIONS, ...LIST_EXTRA].forEach(sec => { if (!Array.isArray(d[sec])) d[sec] = []; });
   d.bulmaca = normalizePuzzle(d.bulmaca);
-  d.pets = normalizePets(d.pets, d.pet);
+  d.emojis = trimEmojis(d.emojis);
+  d.pets = normalizePets(d.pets);
   delete d.pet;
   d.deleted = normalizeDeleted(d.deleted);
   delete d.word;
@@ -1373,10 +1374,66 @@ document.addEventListener("keydown", e => {
   }
 });
 
-/* ---------- Canavar ---------- */
+/* ---------- Saat ---------- */
 
-const PET_COLORS = ["#B39BFF", "#FFA3C2", "#6DD8C6", "#FFC56E", "#8DBBFF"];
-const PET_COLORS_OLD = ["#8E6FE0", "#F07FA0", "#3FA99D", "#F2A541", "#5B8DEF"];
+const TZ = "Europe/Istanbul";
+const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+let clockBase = null;
+let clockJob = null;
+
+const dayOf = ms => dayFmt.format(new Date(ms));
+const clockOk = () => !!clockBase;
+
+function nowMs() {
+  return clockBase ? clockBase.server + (performance.now() - clockBase.perf) : Date.now();
+}
+
+async function fetchServerTime() {
+  try {
+    const t0 = performance.now();
+    const res = await fetch(location.origin + location.pathname + "?t=" + Date.now(), { method: "HEAD", cache: "no-store" });
+    const t1 = performance.now();
+    const ms = Date.parse(res.headers.get("Date") || "");
+    if (Number.isFinite(ms)) return { server: ms + 500 + (t1 - t0) / 2, perf: t1 };
+  } catch {}
+  try {
+    const t0 = performance.now();
+    const res = await fetch("https://worldtimeapi.org/api/timezone/Etc/UTC", { cache: "no-store" });
+    const t1 = performance.now();
+    const j = await res.json();
+    const ms = Date.parse(j.utc_datetime || "");
+    if (Number.isFinite(ms)) return { server: ms + (t1 - t0) / 2, perf: t1 };
+  } catch {}
+  try {
+    const t0 = performance.now();
+    const res = await fetch("https://timeapi.io/api/time/current/zone?timeZone=UTC", { cache: "no-store" });
+    const t1 = performance.now();
+    const j = await res.json();
+    const ms = Date.parse(String(j.dateTime || "").replace(/Z?$/, "Z"));
+    if (Number.isFinite(ms)) return { server: ms + (t1 - t0) / 2, perf: t1 };
+  } catch {}
+  return null;
+}
+
+function syncClock(force) {
+  if (clockBase && !force) return Promise.resolve(true);
+  if (!clockJob) {
+    clockJob = fetchServerTime().then(r => {
+      clockJob = null;
+      if (r) clockBase = r;
+      return !!clockBase;
+    });
+  }
+  return clockJob;
+}
+
+/* ---------- Petler ---------- */
+
+const PET_VER = 2;
+const PET_KINDS = {
+  duck: { name: "Ördek", icon: "🐥", def: "Vakvak", colors: ["#FFD84D", "#FFF3DC", "#FFB8CB", "#A9DCFF", "#BDEBA6"] },
+  monkey: { name: "Maymun", icon: "🐵", def: "Muzcuk", colors: ["#B07A52", "#86583A", "#D9AA7C", "#E7A2B9", "#A29CCB"] }
+};
 const PET_STATS = [
   { k: "food", name: "Tokluk", icon: "🍓", rate: 4 },
   { k: "fun", name: "Eğlence", icon: "⚽", rate: 3 },
@@ -1384,65 +1441,124 @@ const PET_STATS = [
   { k: "energy", name: "Enerji", icon: "💤", rate: 2.5 }
 ];
 const PET_ACTIONS = {
-  feed: { label: "Besle", icon: "🍓", fx: ["🍓", "🍪", "🍎"], change: { food: 35 }, says: "besledi", full: "food", fullMsg: "Karnı tok, şimdilik yemek istemiyor" },
+  feed: { label: "Besle", icon: "🍓", fx: ["🍓", "🍌", "🍪"], change: { food: 35 }, says: "besledi", full: "food", fullMsg: "Karnı tok, şimdilik yemek istemiyor" },
   play: { label: "Oyna", icon: "⚽", fx: ["⚽", "✨", "🎈"], change: { fun: 30, energy: -12 }, says: "oynadı", full: "fun", fullMsg: "Çok eğlendi, biraz dinlensin" },
   wash: { label: "Yıka", icon: "🫧", fx: ["🫧", "🫧", "🧼"], change: { clean: 45 }, says: "yıkadı", full: "clean", fullMsg: "Zaten tertemiz" },
   sleep: { label: "Uyut", icon: "💤", fx: ["💤", "🌙", "⭐"], change: { energy: 60 }, says: "uyuttu", full: "energy", fullMsg: "Uykusu yok, enerjisi dolu" }
 };
 const PET_TASKS = [
-  { id: "feed", title: "Canavarı besle", xp: 10 },
-  { id: "play", title: "Canavarla oyna", xp: 10 },
-  { id: "wash", title: "Canavarı yıka", xp: 10 },
+  { id: "feed", title: "Petini besle", xp: 10 },
+  { id: "play", title: "Petinle oyna", xp: 10 },
+  { id: "wash", title: "Petini yıka", xp: 10 },
   { id: "mood", title: "Bugün nasıl hissettiğini işaretle", xp: 10, go: "home" },
   { id: "note", title: "Bir not ya da fikir yaz", xp: 15, go: "notes" },
   { id: "puzzle", title: "Bir bulmaca çöz", xp: 20, go: "word" },
   { id: "plan", title: "Bir planı tamamla", xp: 15, go: "plans" },
-  { id: "letter", title: "Diğerine bir not bırak", xp: 15, go: "letters" }
+  { id: "letter", title: "Diğerine bir not bırak", xp: 15, go: "letters" },
+  { id: "share", title: "Bir film, dizi ya da şarkı öner", xp: 10, go: "films" },
+  { id: "emoji", title: "Diğerine emoji gönder", xp: 10, show: "other" },
+  { id: "meet", title: "Petleri buluştur", xp: 15, show: "meet" }
 ];
-const PET_STAGES = ["Bebek canavar", "Minik canavar", "Genç canavar", "Koca canavar"];
+const PET_STAGES = ["Bebek", "Minik", "Genç", "Koca"];
 const LEVEL_XP = 100;
 const ALL_DONE_BONUS = 30;
+const ALL_DONE_STARS = 6;
+const START_STARS = 20;
+const CUSTOM_MAX = 3;
+const CUSTOM_XP = 5;
+const WEEK_PRIZE = 30;
+const DECO_MAX = 6;
+const DECO = ["🌸", "🌼", "🌷", "🍀", "🍄", "🦋", "🐝", "🌈", "☀️", "🌙", "⭐", "✨", "☁️", "❄️", "🫧", "🎈", "🎀", "💖", "🎵", "🍓", "🍌", "🍭", "🧁", "🍉", "🐚", "🌊", "🔥", "🪐"];
+const DECO_SPOTS = [[10, 16], [88, 14], [6, 54], [92, 50], [14, 86], [86, 84]];
+const SEND_EMOJIS = ["❤️", "😘", "🤗", "🥰", "😂", "🥺", "🌸", "⭐", "🍪", "🍌", "🎉", "☕"];
+const SEND_LIMIT = 15;
+const SHOP = [
+  { id: "party", slot: "head", name: "Parti şapkası", price: 30 },
+  { id: "bow", slot: "head", name: "Fiyonk", price: 40 },
+  { id: "bunny", slot: "head", name: "Tavşan kulağı", price: 60 },
+  { id: "beanie", slot: "head", name: "Bere", price: 60 },
+  { id: "flowers", slot: "head", name: "Çiçek tacı", price: 80 },
+  { id: "phones", slot: "head", name: "Kulaklık", price: 90 },
+  { id: "chef", slot: "head", name: "Aşçı şapkası", price: 100 },
+  { id: "cowboy", slot: "head", name: "Kovboy şapkası", price: 110 },
+  { id: "witch", slot: "head", name: "Cadı şapkası", price: 120 },
+  { id: "crown", slot: "head", name: "Altın taç", price: 200 },
+  { id: "round", slot: "eyes", name: "Yuvarlak gözlük", price: 40 },
+  { id: "star", slot: "eyes", name: "Yıldız gözlük", price: 60 },
+  { id: "sun", slot: "eyes", name: "Güneş gözlüğü", price: 70 },
+  { id: "hearts", slot: "eyes", name: "Kalp gözlük", price: 90 },
+  { id: "monocle", slot: "eyes", name: "Monokl", price: 110 },
+  { id: "bowtie", slot: "neck", name: "Papyon", price: 35 },
+  { id: "bell", slot: "neck", name: "Çıngıraklı tasma", price: 45 },
+  { id: "bandana", slot: "neck", name: "Bandana", price: 55 },
+  { id: "scarf", slot: "neck", name: "Atkı", price: 65 },
+  { id: "medal", slot: "neck", name: "Madalya", price: 120 },
+  { id: "pearls", slot: "neck", name: "İnci kolye", price: 140 },
+  { id: "meadow", slot: "bg", name: "Çayır", price: 50 },
+  { id: "beach", slot: "bg", name: "Deniz kenarı", price: 70 },
+  { id: "snow", slot: "bg", name: "Karlı gün", price: 80 },
+  { id: "sunset", slot: "bg", name: "Gün batımı", price: 90 },
+  { id: "night", slot: "bg", name: "Yıldızlı gece", price: 100 },
+  { id: "candy", slot: "bg", name: "Şeker diyarı", price: 110 },
+  { id: "space", slot: "bg", name: "Uzay", price: 150 }
+];
+const SLOTS = { head: "Baş", eyes: "Göz", neck: "Boyun", bg: "Arka plan", deco: "Süsler" };
+const FULL_STATS = { food: 100, fun: 100, clean: 100, energy: 100 };
+
 let petFx = null;
 let petRenaming = false;
 let petShow = "";
-const PET_DEFAULTS = {
-  burcun: { name: "Pofuduk", color: "#FFA3C2" },
-  dodom: { name: "Boncuk", color: "#8DBBFF" }
-};
-const myPet = () => data.pets[profile];
+let shopSlot = "head";
+let petSynced = false;
+let petSvgSeq = 0;
+let meetFx = 0;
+let chooseKind = "duck";
+let chooseName = "";
 
-function normalizePets(src, legacy) {
+const myPet = () => data.pets[profile];
+const starsOf = xp => Math.round(xp / 5);
+const kindOf = pet => PET_KINDS[pet.kind] || PET_KINDS.duck;
+
+function freshPet() {
+  return {
+    v: PET_VER, kind: "", name: "", color: "", xp: 0,
+    stats: { food: 80, fun: 80, clean: 80, energy: 80 },
+    at: 0, day: "", done: {}, streak: 0, lastFull: "", tasks: [],
+    coins: START_STARS, owned: [], wear: {}, deco: [], weeks: {},
+    prizeWeek: "", meetDay: "", meets: 0, log: [], updated: 0
+  };
+}
+
+function normalizePets(src) {
   const out = {};
-  Object.keys(PROFILES).forEach(k => {
-    const raw = src && typeof src === "object" && src[k] ? src[k] : legacy && typeof legacy === "object" ? JSON.parse(JSON.stringify(legacy)) : null;
-    if (raw && !(src && src[k]) && k !== "burcun") {
-      delete raw.name;
-      delete raw.color;
-    }
-    out[k] = normalizePet(raw, PET_DEFAULTS[k]);
-  });
+  Object.keys(PROFILES).forEach(k => { out[k] = normalizePet(src && typeof src === "object" ? src[k] : null); });
   return out;
 }
 
-function normalizePet(p, def) {
-  const dflt = def || PET_DEFAULTS.burcun;
-  const src = p && typeof p === "object" ? p : {};
+function normalizePet(src) {
+  if (!src || typeof src !== "object" || src.v !== PET_VER) return freshPet();
+  const kind = PET_KINDS[src.kind] ? src.kind : "";
   const st = src.stats && typeof src.stats === "object" ? src.stats : {};
   const clamp = v => Math.min(100, Math.max(0, Number(v)));
+  const owned = Array.isArray(src.owned) ? src.owned.filter(id => SHOP.some(x => x.id === id)) : [];
+  const wear = src.wear && typeof src.wear === "object" ? src.wear : {};
   return {
-    name: typeof src.name === "string" && src.name.trim() ? src.name.trim().slice(0, 24) : dflt.name,
-    color: PET_COLORS.includes(src.color) ? src.color : PET_COLORS_OLD.includes(src.color) ? PET_COLORS[PET_COLORS_OLD.indexOf(src.color)] : dflt.color,
+    v: PET_VER,
+    kind,
+    name: typeof src.name === "string" && src.name.trim() ? src.name.trim().slice(0, 24) : kind ? PET_KINDS[kind].def : "",
+    color: kind && PET_KINDS[kind].colors.includes(src.color) ? src.color : kind ? PET_KINDS[kind].colors[0] : "",
     xp: Math.max(0, Number(src.xp) || 0),
     stats: Object.fromEntries(PET_STATS.map(s => [s.k, Number.isFinite(Number(st[s.k])) && st[s.k] !== null ? clamp(st[s.k]) : 80])),
-    at: Number(src.at) || Date.now(),
+    at: Number(src.at) || 0,
     day: typeof src.day === "string" ? src.day : "",
     done: src.done && typeof src.done === "object" ? src.done : {},
     streak: Number(src.streak) || 0,
     lastFull: typeof src.lastFull === "string" ? src.lastFull : "",
-    tasks: Array.isArray(src.tasks) ? src.tasks.filter(t => t && t.id && typeof t.title === "string") : [],
-    coins: Number.isFinite(Number(src.coins)) && src.coins !== null && src.coins !== undefined ? Math.max(0, Number(src.coins)) : Math.floor((Number(src.xp) || 0) / 5),
-    owned: Array.isArray(src.owned) ? src.owned.filter(id => SHOP.some(x => x.id === id)) : [],
-    wear: Object.fromEntries(Object.keys(SLOTS).filter(k => src.wear && SHOP.some(x => x.id === src.wear[k] && x.slot === k && Array.isArray(src.owned) && src.owned.includes(x.id))).map(k => [k, src.wear[k]])),
+    tasks: Array.isArray(src.tasks) ? src.tasks.filter(t => t && t.id && typeof t.title === "string").slice(0, CUSTOM_MAX) : [],
+    coins: Math.max(0, Number(src.coins) || 0),
+    owned,
+    wear: Object.fromEntries(Object.keys(SLOTS).filter(k => owned.includes(wear[k]) && SHOP.some(x => x.id === wear[k] && x.slot === k)).map(k => [k, wear[k]])),
+    deco: Array.isArray(src.deco) ? src.deco.filter(e => DECO.includes(e)).slice(0, DECO_MAX) : [],
     weeks: trimWeeks(src.weeks),
     prizeWeek: typeof src.prizeWeek === "string" ? src.prizeWeek : "",
     meetDay: typeof src.meetDay === "string" ? src.meetDay : "",
@@ -1452,24 +1568,79 @@ function normalizePet(p, def) {
   };
 }
 
-function yesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return ymd(d);
+function trimEmojis(list) {
+  const limit = Date.now() - 10 * 86400000;
+  return (Array.isArray(list) ? list : [])
+    .filter(x => x && x.id && typeof x.e === "string" && PROFILES[x.from] && PROFILES[x.to] && Number(x.created) > limit)
+    .slice(-200);
+}
+
+const yesterdayStr = () => dayOf(nowMs() - 86400000);
+
+function dowOf(day) {
+  const [y, m, d] = day.split("-").map(Number);
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+}
+
+function weekKey(ms = nowMs()) {
+  const day = dayOf(ms);
+  const [y, m, d] = day.split("-").map(Number);
+  const x = new Date(Date.UTC(y, m - 1, d));
+  x.setUTCDate(x.getUTCDate() - dowOf(day));
+  return x.toISOString().slice(0, 10);
+}
+
+const lastWeekKey = () => weekKey(nowMs() - 7 * 86400000);
+
+function trimWeeks(w) {
+  const out = {};
+  Object.keys(w || {}).sort().slice(-8).forEach(k => { out[k] = Number(w[k]) || 0; });
+  return out;
+}
+
+function addWeek(pet, pts, when) {
+  const k = weekKey(when || nowMs());
+  pet.weeks = trimWeeks({ ...pet.weeks, [k]: Math.max(0, (Number(pet.weeks[k]) || 0) + pts) });
+}
+
+function weekWinner(key) {
+  const sc = Object.keys(PROFILES).filter(k => data.pets[k].kind).map(k => [k, Number((data.pets[k].weeks || {})[key]) || 0]);
+  if (!sc.length) return null;
+  const max = Math.max(...sc.map(x => x[1]));
+  if (!max) return null;
+  const top = sc.filter(x => x[1] === max);
+  return top.length === 1 ? top[0][0] : "tie";
+}
+
+function claimWeekPrize() {
+  if (!$("login").hidden || !clockOk() || (cloud && !petSynced)) return;
+  const pet = myPet();
+  if (!pet.kind) return;
+  const lw = lastWeekKey();
+  if (pet.prizeWeek === lw || weekWinner(lw) !== profile) return;
+  pet.prizeWeek = lw;
+  pet.coins += WEEK_PRIZE;
+  petLog("haftanın şampiyonu oldu 👑");
+  pet.updated = nowMs();
+  save();
+  renderPet();
+  setTimeout(() => toast(`Geçen haftanın şampiyonu sensin! +${WEEK_PRIZE} ⭐`), 700);
 }
 
 function petNow(pet) {
-  const h = Math.max(0, (Date.now() - pet.at) / 3600000);
+  if (!pet.at) return { ...pet.stats };
+  const h = Math.max(0, (nowMs() - pet.at) / 3600000);
   const out = {};
   PET_STATS.forEach(s => { out[s.k] = Math.max(0, Math.min(100, pet.stats[s.k] - s.rate * h)); });
   return out;
 }
 
 const petDone = pet => (pet.day === todayStr() ? pet.done : {});
-const petAllTasks = pet => [...PET_TASKS, ...pet.tasks.map(t => ({ id: "c:" + t.id, title: t.title, xp: 10, custom: t.id }))];
+const petAllTasks = pet => [...PET_TASKS, ...pet.tasks.map(t => ({ id: "c:" + t.id, title: t.title, xp: CUSTOM_XP, custom: t.id }))];
 const petLevel = pet => 1 + Math.floor(pet.xp / LEVEL_XP);
 const petStage = pet => { const l = petLevel(pet); return l >= 10 ? 3 : l >= 6 ? 2 : l >= 3 ? 1 : 0; };
 const petStreak = pet => (pet.lastFull === todayStr() || pet.lastFull === yesterdayStr() ? pet.streak : 0);
+const stageName = pet => `${PET_STAGES[petStage(pet)]} ${kindOf(pet).name.toLocaleLowerCase("tr")}`;
 
 function petMood(stats) {
   const vals = PET_STATS.map(s => stats[s.k]);
@@ -1483,16 +1654,16 @@ function petMood(stats) {
 
 function petSays(pet, stats, mine = true) {
   const low = PET_STATS.filter(s => stats[s.k] < 30).sort((a, b) => stats[a.k] - stats[b.k])[0];
-  if (low) return { food: "Karnım çok acıktı…", fun: "Canım sıkıldı, oynayalım mı?", clean: "Biraz kirlendim, yıkar mısın?", energy: "Uykum geldi…" }[low.k];
+  if (low) return { food: pet.kind === "monkey" ? "Bir muz alabilir miyim?" : "Karnım çok acıktı…", fun: "Canım sıkıldı, oynayalım mı?", clean: "Biraz kirlendim, yıkar mısın?", energy: "Uykum geldi…" }[low.k];
   if (petMood(stats) === "sad") return "Biraz ilgi bekliyorum, beni unutma…";
   const tasks = petAllTasks(pet);
   const done = petDone(pet);
   if (tasks.every(t => done[t.id])) return mine ? "Bugün harikaydın, seni çok seviyorum!" : "Bugün çok iyi bakıldım!";
-  const lines = ["Bugün neler yapıyoruz?", "Yanımda olmana bayılıyorum!", "Görevleri birlikte bitirelim!", "Biraz ilgi iyi gelir."];
-  return lines[new Date().getHours() % lines.length];
+  const lines = pet.kind === "monkey"
+    ? ["Ağaca tırmanalım mı?", "Uu-aa! Bugün neler yapıyoruz?", "Görevleri birlikte bitirelim!", "Yanımda olmana bayılıyorum!"]
+    : ["Vak vak! Bugün neler yapıyoruz?", "Gölette yüzmeye ne dersin?", "Görevleri birlikte bitirelim!", "Yanımda olmana bayılıyorum!"];
+  return lines[new Date(nowMs()).getHours() % lines.length];
 }
-
-let petSvgSeq = 0;
 
 function mixHex(a, b, t) {
   const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -1500,61 +1671,142 @@ function mixHex(a, b, t) {
   return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("");
 }
 
-function petSvg(pet, stats, mood, stage) {
+function starPath(cx, cy, R, r) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rad = i % 2 ? r : R;
+    pts.push(`${(cx + Math.cos(a) * rad).toFixed(1)} ${(cy + Math.sin(a) * rad).toFixed(1)}`);
+  }
+  return "M" + pts.join("L") + "Z";
+}
+
+function petWear(w) {
+  const parts = { head: "", eyes: "", neck: "" };
+  const ink = "#2B1B22";
+  const heart = (cx, cy) => `M${cx} ${cy + 14}C${cx - 26} ${cy - 2} ${cx - 13} ${cy - 23} ${cx} ${cy - 9}C${cx + 13} ${cy - 23} ${cx + 26} ${cy - 2} ${cx} ${cy + 14}Z`;
+  const head = {
+    party: `<path d="M80 46L100 4L120 46Z" fill="#FF6B8B" stroke="#D94A6C" stroke-width="2" stroke-linejoin="round"/><path d="M89 26L111 26L115 36L85 36Z" fill="#FFF" opacity=".7"/><circle cx="91" cy="40" r="2.4" fill="#FFD54A"/><circle cx="108" cy="18" r="2" fill="#7FD1FF"/><circle cx="100" cy="6" r="6.5" fill="#FFD54A" stroke="#E0A100" stroke-width="1.5"/>`,
+    bow: `<path d="M130 44L110 31L112 57ZM130 44L150 31L148 57Z" fill="#FF5C8A" stroke="#D63F6E" stroke-width="2" stroke-linejoin="round"/><path d="M114 38L124 42M146 38L136 42" stroke="#FFF" stroke-width="2" stroke-linecap="round" opacity=".6"/><circle cx="130" cy="44" r="6" fill="#E0406E"/>`,
+    bunny: `<g stroke="#E2D3DA" stroke-width="2"><ellipse cx="80" cy="22" rx="10" ry="26" fill="#FFF" transform="rotate(-14 80 22)"/><ellipse cx="120" cy="22" rx="10" ry="26" fill="#FFF" transform="rotate(14 120 22)"/></g><ellipse cx="80" cy="24" rx="4.5" ry="17" fill="#FFB3C8" transform="rotate(-14 80 24)"/><ellipse cx="120" cy="24" rx="4.5" ry="17" fill="#FFB3C8" transform="rotate(14 120 24)"/><path d="M60 58Q100 28 140 58" stroke="#FF8FB0" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+    beanie: `<path d="M52 66Q52 20 100 20Q148 20 148 66Z" fill="#4C7AE0"/><path d="M76 26L76 60M100 22L100 58M124 26L124 60" stroke="#3A62C4" stroke-width="3" stroke-linecap="round" opacity=".6"/><path d="M50 58Q100 46 150 58L150 70Q100 58 50 70Z" fill="#3A62C4"/><circle cx="100" cy="18" r="9" fill="#FFF" stroke="#DDE4F5" stroke-width="2"/>`,
+    flowers: `<path d="M58 58Q100 26 142 58" stroke="#5DBB63" stroke-width="3.5" fill="none"/>${[[62, 52, "#FF7AA2"], [79, 40, "#FFD54A"], [100, 34, "#7FD1FF"], [121, 40, "#FFD54A"], [138, 52, "#FF7AA2"]].map(([x, y, c]) => `<g fill="${c}"><circle cx="${x}" cy="${y - 5}" r="4"/><circle cx="${x + 5}" cy="${y}" r="4"/><circle cx="${x}" cy="${y + 5}" r="4"/><circle cx="${x - 5}" cy="${y}" r="4"/></g><circle cx="${x}" cy="${y}" r="3" fill="#FFF8D6"/>`).join("")}`,
+    phones: `<path d="M50 90Q48 32 100 32Q152 32 150 90" stroke="#3A3A4A" stroke-width="7" fill="none" stroke-linecap="round"/><rect x="37" y="74" width="19" height="32" rx="9" fill="#FF6B8B" stroke="#C94769" stroke-width="2"/><rect x="144" y="74" width="19" height="32" rx="9" fill="#FF6B8B" stroke="#C94769" stroke-width="2"/><circle cx="46.5" cy="90" r="4" fill="#FFF" opacity=".55"/><circle cx="153.5" cy="90" r="4" fill="#FFF" opacity=".55"/>`,
+    chef: `<g fill="#FFF" stroke="#D8D2DA" stroke-width="2"><circle cx="80" cy="26" r="15"/><circle cx="120" cy="26" r="15"/><circle cx="100" cy="17" r="18"/><rect x="72" y="30" width="56" height="20" rx="5"/></g><path d="M86 36v10M100 36v10M114 36v10" stroke="#E6E0E8" stroke-width="2"/>`,
+    cowboy: `<path d="M74 44Q72 8 90 12Q100 18 110 12Q128 8 126 44Z" fill="#A0683A" stroke="#7A4A22" stroke-width="2" stroke-linejoin="round"/><path d="M74 28h52v8h-52z" fill="#5A3418"/><ellipse cx="100" cy="45" rx="62" ry="10" fill="#8B5A2B" stroke="#6A4020" stroke-width="2"/>`,
+    witch: `<ellipse cx="100" cy="46" rx="58" ry="10" fill="#4E3880"/><path d="M66 46Q92 34 104 4Q112 30 134 46Z" fill="#6B4FA0" stroke="#4E3880" stroke-width="2" stroke-linejoin="round"/><path d="M72 42Q100 33 128 42L130 46Q100 38 70 46Z" fill="#FFC94D"/><path d="${starPath(108, 24, 6, 2.6)}" fill="#FFE27A"/>`,
+    crown: `<path d="M68 48L66 18L84 34L100 10L116 34L134 18L132 48Z" fill="#F5C542" stroke="#D9A21B" stroke-width="2.5" stroke-linejoin="round"/><circle cx="66" cy="17" r="3.5" fill="#FFE27A"/><circle cx="100" cy="9" r="3.5" fill="#FFE27A"/><circle cx="134" cy="17" r="3.5" fill="#FFE27A"/><circle cx="100" cy="38" r="5" fill="#FF4F7B"/><circle cx="80" cy="41" r="3.5" fill="#4FC3F7"/><circle cx="120" cy="41" r="3.5" fill="#7ED67E"/>`
+  };
+  const eyes = {
+    round: `<g fill="#FFF" fill-opacity=".14" stroke="${ink}" stroke-width="4"><circle cx="80" cy="86" r="17"/><circle cx="120" cy="86" r="17"/></g><path d="M97 84q3-4 6 0M63 82L50 78M137 82L150 78" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+    star: `<path d="${starPath(80, 87, 21, 10)}" fill="#FFD54A" fill-opacity=".85" stroke="#E0A100" stroke-width="2" stroke-linejoin="round"/><path d="${starPath(120, 87, 21, 10)}" fill="#FFD54A" fill-opacity=".85" stroke="#E0A100" stroke-width="2" stroke-linejoin="round"/><path d="M96 86h8" stroke="#E0A100" stroke-width="3"/>`,
+    sun: `<rect x="59" y="74" width="40" height="26" rx="12" fill="#1E1E2A"/><rect x="101" y="74" width="40" height="26" rx="12" fill="#1E1E2A"/><path d="M99 82h2M59 82L48 78M141 82L152 78" stroke="#1E1E2A" stroke-width="4" stroke-linecap="round"/><path d="M66 81h10M108 81h10" stroke="#FFF" stroke-width="3" stroke-linecap="round" opacity=".45"/>`,
+    hearts: `<path d="${heart(80, 86)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="${heart(120, 86)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="M99 82h2" stroke="#C2185B" stroke-width="3"/>`,
+    monocle: `<circle cx="120" cy="86" r="16" fill="#FFF" fill-opacity=".15" stroke="#C9971A" stroke-width="3.5"/><path d="M135 92Q150 118 134 142" stroke="#C9971A" stroke-width="1.8" fill="none"/>`
+  };
+  const neck = {
+    bowtie: `<path d="M100 140L82 129L82 151ZM100 140L118 129L118 151Z" fill="#3D5AFE" stroke="#2A3EB1" stroke-width="2" stroke-linejoin="round"/><circle cx="100" cy="140" r="5.5" fill="#2A3EB1"/>`,
+    bell: `<path d="M56 130Q100 152 144 130L144 140Q100 162 56 140Z" fill="#E53935" stroke="#B71C1C" stroke-width="1.5"/><circle cx="100" cy="155" r="8" fill="#FFC94D" stroke="#C9971A" stroke-width="2"/><path d="M96 157h8" stroke="#8A6512" stroke-width="2" stroke-linecap="round"/>`,
+    bandana: `<path d="M58 132Q100 150 142 132L100 172Z" fill="#2D9CDB" stroke="#1B6FA0" stroke-width="2" stroke-linejoin="round"/>${[[90, 148], [110, 148], [100, 160], [78, 140], [122, 140]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#FFF"/>`).join("")}`,
+    scarf: `<path d="M52 128Q100 156 148 128L148 142Q100 170 52 142Z" fill="#E85D4A"/><path d="M116 150L122 182L136 178L128 146Z" fill="#D14836"/><path d="M60 138Q100 160 140 138" stroke="#FFF" stroke-width="3" fill="none" opacity=".5" stroke-dasharray="6 6"/>`,
+    medal: `<path d="M86 128L100 156L114 128" stroke="#3D5AFE" stroke-width="7" fill="none" stroke-linejoin="round"/><circle cx="100" cy="164" r="11" fill="#F5C542" stroke="#D9A21B" stroke-width="2.5"/><path d="${starPath(100, 164, 6, 2.6)}" fill="#FFF3B0"/>`,
+    pearls: Array.from({ length: 9 }, (_, i) => {
+      const x = 68 + i * 8;
+      const y = 134 + (1 - ((x - 100) / 34) ** 2) * 12;
+      return `<circle cx="${x}" cy="${y.toFixed(1)}" r="4.2" fill="#FFF" stroke="#D9CFE6" stroke-width="1.2"/>`;
+    }).join("")
+  };
+  if (head[w.head]) parts.head = head[w.head];
+  if (eyes[w.eyes]) parts.eyes = eyes[w.eyes];
+  if (neck[w.neck]) parts.neck = neck[w.neck];
+  return parts;
+}
+
+function petSvg(pet, stats, mood, stage, wearOver, still) {
   const id = "pg" + (++petSvgSeq);
-  const c = pet.color;
-  const light = mixHex(c, "#FFFFFF", 0.5);
-  const belly = mixHex(c, "#FFFFFF", 0.62);
-  const shade = mixHex(c, "#2A1030", 0.18);
-  const line = mixHex(c, "#2A1030", 0.42);
-  const ink = "#2E1A3B";
-  const wear = petWear(pet);
-  const s = [0.8, 0.9, 0.98, 1.05][stage];
+  const kind = pet.kind === "monkey" ? "monkey" : "duck";
+  const c = pet.color || PET_KINDS[kind].colors[0];
+  const light = mixHex(c, "#FFFFFF", 0.55);
+  const shade = mixHex(c, "#3A1A10", 0.2);
+  const line = mixHex(c, "#2A1020", 0.45);
+  const ink = "#2B1B2E";
+  const wear = petWear(wearOver || pet.wear || {});
+  const s = [0.82, 0.9, 0.97, 1.04][stage] || 1;
   const sw = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round"`;
   const happy = mood === "happy";
-
-  const ear = `<path d="M60 86C46 66 44 42 56 34C70 38 82 56 84 70Z" fill="${c}" ${sw}/><path d="M62 74C55 60 54 48 58 43C66 48 73 58 75 66Z" fill="#FFB3C8" opacity=".85"/>`;
-  const ears = `<g class="pet-ear l">${ear}</g><g class="pet-ear r" transform="translate(200 0) scale(-1 1)">${ear}</g>`;
-  const hornSize = [0, 0.75, 1, 1.3][stage];
-  const horn = `<path d="M86 60C83 48 86 38 91 34C95 40 96 50 95 58Z" fill="#FFF1C9" stroke="#E8C77A" stroke-width="2" stroke-linejoin="round"/>`;
-  const top = stage === 0
-    ? `<path d="M100 54C100 46 101 41 103 36" stroke="#4FAE5B" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M103 38C96 29 87 31 85 36C91 41 98 41 103 38Z" fill="#8EDC86" stroke="#4FAE5B" stroke-width="1.6"/><path d="M103 38C108 28 119 28 121 33C115 39 108 41 103 38Z" fill="#6CCB6B" stroke="#4FAE5B" stroke-width="1.6"/>`
-    : `<g transform="translate(91 58) scale(${hornSize}) translate(-91 -58)">${horn}</g><g transform="translate(109 58) scale(${hornSize}) translate(-109 -58) translate(200 0) scale(-1 1)">${horn}</g>`;
-
-  const armY = happy ? 128 : 140;
-  const armRot = happy ? 40 : 18;
-  const arms = `<ellipse class="pet-arm" cx="42" cy="${armY}" rx="9" ry="14" fill="${c}" ${sw} transform="rotate(${armRot} 42 ${armY})"/><ellipse class="pet-arm r" cx="158" cy="${armY}" rx="9" ry="14" fill="${c}" ${sw} transform="rotate(${-armRot} 158 ${armY})"/>`;
-  const foot = x => `<ellipse cx="${x}" cy="180" rx="15" ry="9.5" fill="${shade}" ${sw}/><circle cx="${x - 6}" cy="183" r="2" fill="${light}"/><circle cx="${x}" cy="184.5" r="2" fill="${light}"/><circle cx="${x + 6}" cy="183" r="2" fill="${light}"/>`;
-
-  let eyes = "";
-  let mouth = "";
+  const sad = mood === "sad" || mood === "cry";
+  const eye = x => mood === "sleepy"
+    ? `<path d="M${x - 10} 86q10 8 20 0" stroke="${ink}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`
+    : `<g class="pet-eye"><ellipse cx="${x}" cy="86" rx="${stage ? 10.5 : 11.5}" ry="${stage ? 12.5 : 13.5}" fill="url(#${id}e)"/><circle cx="${x + 3.6}" cy="${sad ? 82 : 80.5}" r="4.4" fill="#FFF"/><circle cx="${x - 3.8}" cy="91.5" r="2" fill="#FFF" opacity=".85"/></g>`;
+  let eyes = eye(80) + eye(120);
+  if (sad) eyes += `<path d="M68 70L86 65M132 70L114 65" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
   let extra = "";
-  const eyeOpen = (x, sad) => `<g class="pet-eye"><ellipse cx="${x}" cy="118" rx="${stage === 0 ? 14 : 13}" ry="${stage === 0 ? 16 : 15}" fill="url(#${id}e)"/><circle cx="${x + 4.5}" cy="${sad ? 114 : 111.5}" r="5.6" fill="#FFFFFF"/><circle cx="${x - 4.5}" cy="124.5" r="2.6" fill="#FFFFFF" opacity=".9"/>${happy ? `<circle cx="${x + 5}" cy="122" r="1.2" fill="#FFFFFF"/>` : ""}</g>`;
-  if (mood === "sleepy") {
-    eyes = `<path d="M65 117q11 9 22 0M113 117q11 9 22 0" stroke="${ink}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`;
-    mouth = `<ellipse cx="100" cy="138" rx="4.5" ry="5.5" fill="#7A2E46"/>`;
-    extra += `<g class="pet-z" fill="${line}" font-family="Figtree, sans-serif" font-weight="800"><text x="146" y="72" font-size="18">z</text><text x="160" y="56" font-size="13">z</text></g>`;
-  } else {
-    const sad = mood === "sad" || mood === "cry";
-    eyes = eyeOpen(76, sad) + eyeOpen(124, sad);
-    if (sad) eyes += `<path d="M64 101L83 96M136 101L117 96" stroke="${ink}" stroke-width="3" stroke-linecap="round"/>`;
+  if (mood === "sleepy") extra += `<g class="pet-z" fill="${line}" font-family="Figtree, sans-serif" font-weight="800"><text x="148" y="58" font-size="18">z</text><text x="162" y="42" font-size="13">z</text></g>`;
+  if (happy) extra += `<path class="pet-spark" d="M166 70l2.2 6.2 6.2 2.2-6.2 2.2-2.2 6.2-2.2-6.2-6.2-2.2 6.2-2.2z" fill="#FFD84D"/><path class="pet-spark b" d="M32 92l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4-4.4-1.6 4.4-1.6z" fill="#FFD84D"/>`;
+  const tears = mood === "cry" ? `<path d="M70 100q-4 10 0 16q4-6 0-16z" fill="#8FD3FF"/><path d="M130 100q-4 10 0 16q4-6 0-16z" fill="#8FD3FF"/>` : "";
+  const blush = `<ellipse cx="64" cy="104" rx="10" ry="6" fill="url(#${id}c)"/><ellipse cx="136" cy="104" rx="10" ry="6" fill="url(#${id}c)"/>`;
+  const shine = `<ellipse cx="78" cy="58" rx="15" ry="8" fill="#FFF" opacity=".4" transform="rotate(-28 78 58)"/>`;
+  let art;
+  let belly = mixHex(c, "#FFFFFF", 0.62);
+
+  if (kind === "duck") {
+    const bc = "#FFA43C", bl = "#E07B1E";
+    let beak;
     if (happy) {
-      mouth = `<path d="M90 132Q100 147 110 132Z" fill="#7A2E46" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/><path d="M94.5 139Q100 145 105.5 139Q100 137 94.5 139Z" fill="#FF8FAB"/><path d="M93 132.5l2.6 4.4 2.4-4.4z" fill="#FFFFFF"/>`;
-      extra += `<path class="pet-spark" d="M164 74l2.2 6.2 6.2 2.2-6.2 2.2-2.2 6.2-2.2-6.2-6.2-2.2 6.2-2.2z" fill="#FFD84D"/><path class="pet-spark b" d="M34 92l1.6 4.4 4.4 1.6-4.4 1.6-1.6 4.4-1.6-4.4-4.4-1.6 4.4-1.6z" fill="#FFD84D"/>`;
-    } else if (mood === "ok") {
-      mouth = `<path d="M90 134q5 6 10 0q5 6 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M102 134.5l2.2 3.8 2-3.8z" fill="#FFFFFF"/>`;
-    } else if (mood === "sad") {
-      mouth = `<path d="M92 141q8-7 16 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+      beak = `<path d="M86 104Q100 124 114 104Q100 110 86 104Z" fill="#C2452D" stroke="${bl}" stroke-width="2" stroke-linejoin="round"/><path d="M92 110Q100 118 108 110Q100 108 92 110Z" fill="#FF8FA3"/><path d="M80 102Q100 88 120 102Q100 110 80 102Z" fill="${bc}" stroke="${bl}" stroke-width="2" stroke-linejoin="round"/>`;
+    } else if (sad) {
+      beak = `<path d="M84 106Q100 94 116 106Q112 116 100 116Q88 116 84 106Z" fill="${bc}" stroke="${bl}" stroke-width="2" stroke-linejoin="round"/><path d="M87 109Q100 104 113 109" stroke="${bl}" stroke-width="1.6" fill="none"/>`;
     } else {
-      mouth = `<path d="M89 141q5.5-5 11 0q5.5 5 11 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
-      extra += `<path d="M66 131q-4 11 0 18q4-7 0-18z" fill="#8FD3FF"/><path d="M134 131q-4 11 0 18q4-7 0-18z" fill="#8FD3FF"/>`;
+      beak = `<path d="M82 102Q100 90 118 102Q113 114 100 114Q87 114 82 102Z" fill="${bc}" stroke="${bl}" stroke-width="2" stroke-linejoin="round"/><path d="M85 104Q100 111 115 104" stroke="${bl}" stroke-width="1.6" fill="none"/>`;
     }
-  }
-  if (stats.clean < 30) {
-    extra += `<ellipse cx="64" cy="156" rx="6" ry="4" fill="#8A6A4A" opacity=".35"/><ellipse cx="134" cy="164" rx="7" ry="4.5" fill="#8A6A4A" opacity=".35"/><ellipse cx="118" cy="76" rx="4" ry="3" fill="#8A6A4A" opacity=".3"/><path d="M150 96q4-6 0-12M158 100q4-6 0-12" stroke="#9AA36A" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>`;
+    const foot = x => `<path d="M${x - 13} 184q13-14 26 0q-4 3-8.6 1.4q-4.4 3-8.8 0q-4.6 1.6-8.6-1.4z" fill="${bc}" stroke="${bl}" stroke-width="2" stroke-linejoin="round"/>`;
+    const wr = happy ? 34 : 14;
+    const shell = stage === 0
+      ? `<path d="M52 162L60 152L68 162L76 150L84 162L92 150L100 162L108 150L116 162L124 150L132 162L140 152L148 162Q152 194 100 194Q48 194 52 162Z" fill="#FFFDF5" stroke="#E2D6BE" stroke-width="2.2" stroke-linejoin="round"/><path d="M66 176q6 4 12 0M118 182q6 4 12 0" stroke="#EADFC8" stroke-width="2" fill="none" stroke-linecap="round"/>`
+      : "";
+    art = `
+      <path class="pet-tail" d="M144 146Q170 128 170 150Q166 164 146 164Z" fill="${c}" ${sw}/>
+      ${foot(82)}${foot(118)}
+      <ellipse cx="100" cy="152" rx="50" ry="34" fill="url(#${id}b)" ${sw}/>
+      <ellipse cx="100" cy="162" rx="30" ry="19" fill="url(#${id}k)"/>
+      <ellipse class="pet-arm" cx="54" cy="148" rx="11" ry="20" fill="${c}" ${sw} transform="rotate(${wr} 54 148)"/>
+      <ellipse class="pet-arm r" cx="146" cy="148" rx="11" ry="20" fill="${c}" ${sw} transform="rotate(${-wr} 146 148)"/>
+      ${shell}
+      <path class="pet-ear" d="M100 40C94 24 106 14 115 20C106 22 105 30 108 39" fill="${c}" ${sw}/>
+      <circle cx="100" cy="88" r="50" fill="url(#${id}b)" ${sw}/>
+      ${shine}${blush}${eyes}${beak}${tears}`;
+  } else {
+    const face = mixHex(c, "#FFE7CC", 0.72);
+    const faceL = mixHex(face, "#FFFFFF", 0.4);
+    belly = face;
+    let mouth;
+    if (happy) mouth = `<path d="M88 120Q100 138 112 120Z" fill="#7A2E46" stroke="${ink}" stroke-width="2" stroke-linejoin="round"/><path d="M93 127Q100 134 107 127Q100 124 93 127Z" fill="#FF8FAB"/>`;
+    else if (mood === "sad") mouth = `<path d="M90 128Q100 119 110 128" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    else if (mood === "cry") mouth = `<path d="M88 127q6-5 12 0q6 5 12 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    else if (mood === "sleepy") mouth = `<ellipse cx="100" cy="124" rx="4" ry="5" fill="#7A2E46"/>`;
+    else mouth = `<path d="M89 121Q100 130 111 121" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    const ear = x => `<circle cx="${x}" cy="90" r="17" fill="${c}" ${sw}/><circle cx="${x}" cy="90" r="9.5" fill="${face}"/>`;
+    const ar = happy ? 40 : 16;
+    const tuft = stage === 0
+      ? `<path d="M96 42Q98 32 104 36" stroke="${line}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`
+      : `<path d="M88 44Q92 28 100 38Q105 26 114 43" fill="${c}" ${sw}/>`;
+    art = `
+      <g class="pet-tail"><path d="M140 166C172 170 184 134 164 124C150 118 146 136 158 138" fill="none" stroke="${line}" stroke-width="10" stroke-linecap="round"/><path d="M140 166C172 170 184 134 164 124C150 118 146 136 158 138" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/></g>
+      <ellipse cx="80" cy="182" rx="14" ry="8" fill="${face}" ${sw}/><ellipse cx="120" cy="182" rx="14" ry="8" fill="${face}" ${sw}/>
+      <ellipse cx="100" cy="150" rx="44" ry="33" fill="url(#${id}b)" ${sw}/>
+      <ellipse cx="100" cy="158" rx="27" ry="20" fill="${face}"/>
+      <ellipse class="pet-arm" cx="56" cy="146" rx="10" ry="21" fill="${c}" ${sw} transform="rotate(${ar} 56 146)"/>
+      <ellipse class="pet-arm r" cx="144" cy="146" rx="10" ry="21" fill="${c}" ${sw} transform="rotate(${-ar} 144 146)"/>
+      <g class="pet-ear">${ear(48)}</g><g class="pet-ear r">${ear(152)}</g>
+      <circle cx="100" cy="88" r="50" fill="url(#${id}b)" ${sw}/>
+      ${tuft}
+      <path d="M100 66C88 52 62 56 62 80C62 92 70 98 72 104C72 126 86 136 100 136C114 136 128 126 128 104C130 98 138 92 138 80C138 56 112 52 100 66Z" fill="${face}"/>
+      <ellipse cx="100" cy="116" rx="21" ry="14" fill="${faceL}"/>
+      <ellipse cx="95" cy="110" rx="2.2" ry="1.7" fill="${line}"/><ellipse cx="105" cy="110" rx="2.2" ry="1.7" fill="${line}"/>
+      ${shine}${blush}${eyes}${mouth}${tears}`;
   }
 
-  return `<svg class="pet-svg" viewBox="0 0 200 200" role="img" aria-label="${esc(pet.name)}">
+  return `<svg class="pet-svg${still ? " still" : ""}" viewBox="0 0 200 200" role="img" aria-label="${esc(pet.name || kindOf(pet).name)}">
     <defs>
       <radialGradient id="${id}b" cx="38%" cy="30%" r="75%">
         <stop offset="0" stop-color="${light}"/>
@@ -1563,7 +1815,7 @@ function petSvg(pet, stats, mood, stage) {
       </radialGradient>
       <radialGradient id="${id}k" cx="50%" cy="40%" r="60%">
         <stop offset="0" stop-color="#FFFFFF" stop-opacity=".9"/>
-        <stop offset="1" stop-color="${belly}" stop-opacity="1"/>
+        <stop offset="1" stop-color="${belly}"/>
       </radialGradient>
       <linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#1E1230"/>
@@ -1574,139 +1826,33 @@ function petSvg(pet, stats, mood, stage) {
         <stop offset="1" stop-color="#FF7FA6" stop-opacity="0"/>
       </radialGradient>
     </defs>
-    <ellipse cx="100" cy="190" rx="${Math.round(56 * s)}" ry="6.5" fill="rgba(40,20,50,.14)"/>
-    <g class="pet-body" transform="translate(100 188) scale(${s}) translate(-100 -188)">
-      <path class="pet-tail" d="M154 164C174 164 184 146 175 136C170 147 163 152 150 152Z" fill="${c}" ${sw}/>
-      ${ears}
-      ${top}
-      ${foot(78)}${foot(122)}
-      <path d="M100 52C143 52 167 88 167 128C167 164 139 183 100 183C61 183 33 164 33 128C33 88 57 52 100 52Z" fill="url(#${id}b)" ${sw}/>
-      <ellipse cx="100" cy="150" rx="40" ry="30" fill="url(#${id}k)"/>
-      <ellipse cx="72" cy="78" rx="17" ry="9" fill="#FFFFFF" opacity=".38" transform="rotate(-28 72 78)"/>
-      <circle cx="89" cy="70" r="3.2" fill="#FFFFFF" opacity=".5"/>
-      ${arms}
-      <ellipse cx="58" cy="134" rx="13" ry="9" fill="url(#${id}c)"/>
-      <ellipse cx="142" cy="134" rx="13" ry="9" fill="url(#${id}c)"/>
-      ${eyes}${mouth}
-      ${wear.neck}
-      <g transform="translate(100 118) scale(1.2 1.1) translate(-100 -106)">${wear.eyes}</g>
-      <g transform="translate(100 63) scale(1.1) translate(-100 -72)">${wear.head}</g>
+    <ellipse cx="100" cy="192" rx="${Math.round(54 * s)}" ry="6" fill="rgba(40,20,50,.14)"/>
+    <g class="pet-body" transform="translate(100 190) scale(${s}) translate(-100 -190)">
+      ${art}
+      ${wear.neck}${wear.eyes}${wear.head}
     </g>
     ${extra}
     ${petCrown(pet)}
   </svg>`;
 }
 
-const SHOP = [
-  { id: "party", slot: "head", name: "Parti şapkası", icon: "🎉", price: 40 },
-  { id: "bow", slot: "head", name: "Fiyonk", icon: "🎀", price: 50 },
-  { id: "beanie", slot: "head", name: "Bere", icon: "🧶", price: 70 },
-  { id: "flowers", slot: "head", name: "Çiçek tacı", icon: "🌸", price: 90 },
-  { id: "cowboy", slot: "head", name: "Kovboy şapkası", icon: "🤠", price: 120 },
-  { id: "round", slot: "eyes", name: "Yuvarlak gözlük", icon: "👓", price: 50 },
-  { id: "sun", slot: "eyes", name: "Güneş gözlüğü", icon: "🕶️", price: 80 },
-  { id: "hearts", slot: "eyes", name: "Kalp gözlük", icon: "💖", price: 110 },
-  { id: "bowtie", slot: "neck", name: "Papyon", icon: "👔", price: 45 },
-  { id: "scarf", slot: "neck", name: "Atkı", icon: "🧣", price: 65 },
-  { id: "pearls", slot: "neck", name: "İnci kolye", icon: "📿", price: 130 }
-];
-const SLOTS = { head: "Baş", eyes: "Göz", neck: "Boyun" };
-const ALL_DONE_STARS = 6;
-const WEEK_PRIZE = 30;
-let shopSlot = "head";
-let petSynced = false;
-const starsOf = xp => Math.round(xp / 5);
-
-function weekKey(d = new Date()) {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return ymd(x);
-}
-
-function lastWeekKey() {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return weekKey(d);
-}
-
-function trimWeeks(w) {
-  const out = {};
-  Object.keys(w || {}).sort().slice(-8).forEach(k => { out[k] = Number(w[k]) || 0; });
-  return out;
-}
-
-function addWeek(pet, pts, when) {
-  const k = weekKey(when ? new Date(when) : new Date());
-  pet.weeks = trimWeeks({ ...pet.weeks, [k]: Math.max(0, (Number(pet.weeks[k]) || 0) + pts) });
-}
-
-function weekWinner(key) {
-  const sc = Object.keys(PROFILES).map(k => [k, Number((data.pets[k].weeks || {})[key]) || 0]);
-  const max = Math.max(...sc.map(x => x[1]));
-  if (!max) return null;
-  const top = sc.filter(x => x[1] === max);
-  return top.length === 1 ? top[0][0] : "tie";
-}
-
-function claimWeekPrize() {
-  if (!$("login").hidden || (cloud && !petSynced)) return;
-  const pet = myPet();
-  const lw = lastWeekKey();
-  if (pet.prizeWeek === lw || weekWinner(lw) !== profile) return;
-  pet.prizeWeek = lw;
-  pet.coins += WEEK_PRIZE;
-  petLog("haftanın şampiyonu oldu 👑");
-  pet.updated = Date.now();
-  save();
-  renderPet();
-  setTimeout(() => toast(`Geçen haftanın şampiyonu sensin! +${WEEK_PRIZE} ⭐`), 700);
-}
-
-function petWear(pet) {
-  const parts = { head: "", eyes: "", neck: "" };
-  const ink = "#2B1B22";
-  const heart = (cx, cy) => `M${cx} ${cy + 14}C${cx - 26} ${cy - 2} ${cx - 13} ${cy - 23} ${cx} ${cy - 9}C${cx + 13} ${cy - 23} ${cx + 26} ${cy - 2} ${cx} ${cy + 14}Z`;
-  const w = pet.wear || {};
-  const head = {
-    party: `<path d="M82 74L100 26L118 74Z" fill="#FF6B8B"/><path d="M91 52L109 52L113 62L87 62Z" fill="#FFFFFF" opacity=".75"/><circle cx="100" cy="26" r="6.5" fill="#FFD54A"/>`,
-    bow: `<path d="M128 72L108 60L110 86ZM128 72L148 60L146 86Z" fill="#FF5C8A"/><circle cx="128" cy="72" r="6.5" fill="#E0406E"/>`,
-    beanie: `<path d="M64 82Q64 38 100 38Q136 38 136 82Z" fill="#4C7AE0"/><path d="M62 74Q100 64 138 74L138 86Q100 76 62 86Z" fill="#3A62C4"/><circle cx="100" cy="36" r="8" fill="#FFFFFF"/>`,
-    flowers: `<path d="M62 84Q100 54 138 84" stroke="#5DBB63" stroke-width="3.5" fill="none"/>${[[70, 78, "#FF7AA2"], [84, 68, "#FFD54A"], [100, 64, "#7FD1FF"], [116, 68, "#FFD54A"], [130, 78, "#FF7AA2"]].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="7.5" fill="${c}"/><circle cx="${x}" cy="${y}" r="3" fill="#FFFFFF" opacity=".85"/>`).join("")}`,
-    cowboy: `<path d="M78 72Q76 38 92 42Q100 48 108 42Q124 38 122 72Z" fill="#A0683A"/><path d="M78 62h44v8h-44z" fill="#5A3418"/><ellipse cx="100" cy="73" rx="56" ry="9" fill="#8B5A2B"/>`
-  };
-  const eyes = {
-    round: `<circle cx="80" cy="106" r="18" fill="#FFFFFF" fill-opacity=".12" stroke="${ink}" stroke-width="4"/><circle cx="120" cy="106" r="18" fill="#FFFFFF" fill-opacity=".12" stroke="${ink}" stroke-width="4"/><path d="M98 104q2-4 4 0M62 102L46 96M138 102L154 96" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
-    sun: `<rect x="59" y="93" width="40" height="27" rx="12" fill="#1E1E2A"/><rect x="101" y="93" width="40" height="27" rx="12" fill="#1E1E2A"/><path d="M99 101h2M59 100L46 95M141 100L154 95" stroke="#1E1E2A" stroke-width="4" stroke-linecap="round"/><path d="M66 100h9M108 100h9" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".5"/>`,
-    hearts: `<path d="${heart(80, 106)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="${heart(120, 106)}" fill="#FF4F7B" fill-opacity=".9" stroke="#C2185B" stroke-width="2"/><path d="M99 102h2" stroke="#C2185B" stroke-width="3"/>`
-  };
-  const neck = {
-    bowtie: `<path d="M100 166L83 156L83 176ZM100 166L117 156L117 176Z" fill="#3D5AFE"/><circle cx="100" cy="166" r="5.5" fill="#2A3EB1"/>`,
-    scarf: `<path d="M44 146Q100 176 156 146L156 158Q100 190 44 158Z" fill="#E85D4A"/><path d="M118 164L124 196L137 192L129 162Z" fill="#D14836"/><path d="M60 156Q100 178 140 156" stroke="#FFFFFF" stroke-width="3" fill="none" opacity=".5" stroke-dasharray="6 6"/>`,
-    pearls: Array.from({ length: 9 }, (_, i) => {
-      const x = 68 + i * 8;
-      const y = 168 - ((x - 100) / 32) ** 2 * 13;
-      return `<circle cx="${x}" cy="${y.toFixed(1)}" r="4.2" fill="#FFFFFF" stroke="#D9CFE6" stroke-width="1.2"/>`;
-    }).join("")
-  };
-  if (head[w.head]) parts.head = head[w.head];
-  if (eyes[w.eyes]) parts.eyes = eyes[w.eyes];
-  if (neck[w.neck]) parts.neck = neck[w.neck];
-  return parts;
-}
-
 function petCrown(pet) {
   const owner = Object.keys(data.pets || {}).find(k => data.pets[k] === pet);
   return owner && weekWinner(lastWeekKey()) === owner
-    ? `<g transform="translate(18 22) rotate(-18)"><path d="M0 22L0 6L8 14L15 2L22 14L30 6L30 22Z" fill="#F5C542" stroke="#D9A21B" stroke-width="2" stroke-linejoin="round"/><circle cx="15" cy="16" r="2.8" fill="#FF4F7B"/></g>`
+    ? `<g transform="translate(14 18) rotate(-18)"><path d="M0 22L0 6L8 14L15 2L22 14L30 6L30 22Z" fill="#F5C542" stroke="#D9A21B" stroke-width="2" stroke-linejoin="round"/><circle cx="15" cy="16" r="2.8" fill="#FF4F7B"/></g>`
     : "";
+}
+
+function decoHtml(pet) {
+  return (pet.deco || []).map((e, i) =>
+    `<span class="pet-deco" style="left:${DECO_SPOTS[i][0]}%;top:${DECO_SPOTS[i][1]}%;--d:${(i * 0.55).toFixed(2)}s" aria-hidden="true">${e}</span>`
+  ).join("");
 }
 
 function shopClick(id) {
   const pet = myPet();
   const it = SHOP.find(x => x.id === id);
-  if (!it) return;
-  pet.owned = pet.owned || [];
-  pet.wear = pet.wear || {};
+  if (!it || !pet.kind) return;
   if (!pet.owned.includes(id)) {
     if (pet.coins < it.price) {
       toast(`${it.price - pet.coins} ⭐ daha lazım. Görevleri yaparak kazanabilirsin.`);
@@ -1722,55 +1868,173 @@ function shopClick(id) {
   } else {
     pet.wear[it.slot] = id;
   }
-  pet.updated = Date.now();
+  pet.updated = nowMs();
   petFx = { kind: "play", owner: profile, until: Date.now() + 1000 };
   save();
   renderPet();
   renderHome();
 }
 
+function decoClick(e) {
+  const pet = myPet();
+  if (!DECO.includes(e) || !pet.kind) return;
+  if (pet.deco.includes(e)) pet.deco = pet.deco.filter(x => x !== e);
+  else if (pet.deco.length >= DECO_MAX) {
+    toast(`En fazla ${DECO_MAX} süs koyabilirsin, önce birini kaldır`);
+    return;
+  } else pet.deco.push(e);
+  pet.updated = nowMs();
+  save();
+  renderPet();
+}
+
 function weekCard(owner) {
   const key = weekKey();
-  const keys = Object.keys(PROFILES);
+  const keys = Object.keys(PROFILES).filter(k => data.pets[k].kind);
   const scores = keys.map(k => Number((data.pets[k].weeks || {})[key]) || 0);
   const max = Math.max(1, ...scores);
-  const top = Math.max(...scores);
-  const daysLeft = 7 - ((new Date().getDay() + 6) % 7);
+  const top = Math.max(0, ...scores);
+  const daysLeft = 7 - dowOf(todayStr());
   const lw = weekWinner(lastWeekKey());
   const last = !lw ? "" : lw === "tie"
     ? "Geçen hafta berabere bitti."
     : `Geçen haftanın şampiyonu: ${esc(data.pets[lw].name)} (${esc(PROFILES[lw])}) 👑`;
   const rows = keys.map((k, i) => `<div class="week-row${k === owner ? " me" : ""}">
-      <div class="week-top"><span>${top && scores[i] === top ? "👑 " : ""}${esc(data.pets[k].name)} <em>${esc(PROFILES[k])}</em></span><strong>${scores[i]} puan</strong></div>
+      <div class="week-top"><span>${top && scores[i] === top ? "👑 " : ""}${kindOf(data.pets[k]).icon} ${esc(data.pets[k].name)} <em>${esc(PROFILES[k])}</em></span><strong>${scores[i]} puan</strong></div>
       <div class="progress"><div class="progress-fill" style="width:${(scores[i] / max) * 100}%"></div></div>
     </div>`).join("");
   return `<section class="card plain pet-week">
     <header class="card-head"><h3>🏆 Haftalık yarışma</h3><span class="pet-count">${daysLeft === 1 ? "Son gün" : daysLeft + " gün kaldı"}</span></header>
     ${rows}
-    <p class="pet-hint">Görev puanları pazartesi sıfırlanır. Hafta sonunda önde olan canavar bir hafta taç takar, sahibi ${WEEK_PRIZE} ⭐ kazanır.${last ? " " + last : ""}</p>
+    <p class="pet-hint">Puanlar pazartesi sıfırlanır. Hafta sonunda önde olan pet bir hafta taç takar, sahibi ${WEEK_PRIZE} ⭐ kazanır.${last ? " " + last : ""}</p>
   </section>`;
 }
 
 function shopCard() {
   const pet = myPet();
-  const wear = pet.wear || {};
-  const owned = pet.owned || [];
   const tabs = Object.entries(SLOTS).map(([k, v]) =>
     `<button type="button" class="chip" data-shop-slot="${k}" aria-pressed="${k === shopSlot}">${esc(v)}</button>`
   ).join("");
-  const items = SHOP.filter(x => x.slot === shopSlot).map(it => {
-    const has = owned.includes(it.id);
-    const on = wear[it.slot] === it.id;
-    const label = on ? "Giyiyor ✓" : has ? "Giy" : `⭐ ${it.price}`;
-    return `<button type="button" class="shop-item${on ? " on" : ""}${!has && pet.coins < it.price ? " poor" : ""}" data-shop="${it.id}">
-      <span class="shop-icon" aria-hidden="true">${it.icon}</span><span class="shop-name">${esc(it.name)}</span><span class="shop-price">${label}</span>
-    </button>`;
-  }).join("");
+  let body;
+  if (shopSlot === "deco") {
+    body = `<p class="pet-hint">Petinin etrafına en fazla ${DECO_MAX} emoji koyabilirsin, ücretsiz. Seçili: ${pet.deco.length}/${DECO_MAX}</p>
+      <div class="deco-grid">${DECO.map(e => `<button type="button" class="deco-btn" data-deco="${e}" aria-pressed="${pet.deco.includes(e)}">${e}</button>`).join("")}</div>
+      ${pet.deco.length ? '<button type="button" class="btn small ghost" data-deco-clear="1">Hepsini kaldır</button>' : ""}`;
+  } else {
+    const items = SHOP.filter(x => x.slot === shopSlot).map(it => {
+      const has = pet.owned.includes(it.id);
+      const on = pet.wear[it.slot] === it.id;
+      const label = on ? "Kullanılıyor ✓" : has ? (it.slot === "bg" ? "Seç" : "Tak") : `⭐ ${it.price}`;
+      const thumb = it.slot === "bg"
+        ? `<span class="shop-thumb pet-bg bg-${it.id}"></span>`
+        : `<span class="shop-thumb">${petSvg(pet, FULL_STATS, "happy", 1, { [it.slot]: it.id }, true)}</span>`;
+      return `<button type="button" class="shop-item${on ? " on" : ""}${!has && pet.coins < it.price ? " poor" : ""}${has ? " owned" : ""}" data-shop="${it.id}">
+        ${thumb}<span class="shop-name">${esc(it.name)}</span><span class="shop-price">${label}</span>
+      </button>`;
+    }).join("");
+    body = `<div class="shop-grid">${items}</div>
+      <p class="pet-hint">Her görev yıldız kazandırır. Aldığın bir şeye tekrar dokunarak çıkarabilirsin.</p>`;
+  }
   return `<section class="card plain pet-shop">
     <header class="card-head"><h3>Mağaza</h3><span class="pet-count">⭐ ${pet.coins}</span></header>
     <div class="filters">${tabs}</div>
-    <div class="shop-grid">${items}</div>
-    <p class="pet-hint">Her görev yıldız kazandırır. Aldığın bir eşyaya tekrar dokunarak çıkarabilirsin.</p>
+    ${body}
+  </section>`;
+}
+
+const sentToday = () => data.emojis.filter(x => x.from === profile && dayOf(x.created) === todayStr()).length;
+
+function sendEmoji(e) {
+  if (!SEND_EMOJIS.includes(e)) return;
+  if (!clockOk()) {
+    syncClock();
+    toast("Saat doğrulanıyor, birazdan tekrar dene");
+    return;
+  }
+  if (sentToday() >= SEND_LIMIT) {
+    toast(`Bugünlük emoji hakkın bitti (${SEND_LIMIT})`);
+    return;
+  }
+  const to = otherOf(profile);
+  const t = nowMs();
+  data.emojis.push({ id: newId(), from: profile, to, e, created: t, updated: t, seenAt: 0 });
+  petFx = { kind: "emoji", e, owner: to, until: Date.now() + 1500 };
+  petMark("emoji");
+  save();
+  renderPet();
+  renderHome();
+  toast(`${PROFILES[to]} ${e} emojini görecek`);
+}
+
+function emojiRain(list) {
+  const box = document.createElement("div");
+  box.className = "emoji-rain";
+  box.setAttribute("aria-hidden", "true");
+  const n = Math.min(18, Math.max(8, list.length * 4));
+  box.innerHTML = Array.from({ length: n }, (_, i) =>
+    `<span style="--x:${(i * 53 + 7) % 96}%;--d:${(i * 0.12).toFixed(2)}s;--s:${(0.9 + (i % 3) * 0.3).toFixed(2)}">${esc(list[i % list.length])}</span>`
+  ).join("");
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4500);
+}
+
+function checkEmojis() {
+  if (!data || !$("login").hidden || !myPet()) return;
+  const list = data.emojis.filter(x => x.to === profile && !x.seenAt).sort((a, b) => a.created - b.created);
+  if (!list.length) return;
+  const t = Date.now();
+  list.forEach(x => { x.seenAt = t; x.updated = t; });
+  const pet = myPet();
+  if (pet.kind && clockOk()) {
+    const cur = petNow(pet);
+    cur.fun = Math.min(100, cur.fun + 4 * list.length);
+    PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
+    pet.stats = cur;
+    pet.at = nowMs();
+    pet.updated = nowMs();
+  }
+  save();
+  emojiRain(list.map(x => x.e));
+  toast(`${PROFILES[list[0].from]} sana ${list.slice(-6).map(x => x.e).join("")} gönderdi`);
+  if (active === "pet") renderPet();
+  renderHome();
+}
+
+function emojiCard() {
+  const got = data.emojis.filter(x => x.to === profile).sort((a, b) => b.created - a.created).slice(0, 12);
+  const other = otherOf(profile);
+  return `<section class="card plain pet-emojis">
+    <header class="card-head"><h3>Gelen emojiler</h3><button type="button" class="btn small ghost" data-open="pet" data-pet-show="${other}">Emoji gönder</button></header>
+    ${got.length
+      ? `<ul class="emoji-list">${got.map(x => `<li><span class="emoji-big">${esc(x.e)}</span><span>${esc(PROFILES[x.from])}</span><time>${esc(petClock(x.created))}</time></li>`).join("")}</ul>`
+      : '<p class="mini-empty">Henüz emoji gelmedi.</p>'}
+  </section>`;
+}
+
+function homePetCard() {
+  const pet = myPet();
+  const head = title => `<header class="card-head"><span class="card-icon">${iconSvg("pet")}</span><h3>${title}</h3></header>`;
+  if (!pet.kind) {
+    return `<section class="card" data-tone="pet">${head("Petini seç")}
+      <div class="pet-mini"><div class="pet-egg" aria-hidden="true">🥚</div><div><p>Ördek mi, maymun mu? Yeni petin seni bekliyor.</p></div></div>
+      <button class="link-btn" type="button" data-open="pet" data-pet-show="${profile}">Seçmeye git →</button>
+    </section>`;
+  }
+  const ps = petNow(pet);
+  const ptasks = petAllTasks(pet);
+  const pdone = ptasks.filter(t => petDone(pet)[t.id]).length;
+  const others = Object.keys(PROFILES).filter(k => k !== profile).map(k => {
+    const op = data.pets[k];
+    if (!op.kind) return `<button type="button" class="pet-other" data-open="pet" data-pet-show="${k}"><span class="pet-egg small" aria-hidden="true">🥚</span><span>${esc(PROFILES[k])} henüz petini seçmedi</span></button>`;
+    const os = petNow(op);
+    const ot = petAllTasks(op);
+    return `<button type="button" class="pet-other" data-open="pet" data-pet-show="${k}">${petSvg(op, os, petMood(os), petStage(op), null, true)}<span><strong>${esc(op.name)}</strong> ${esc(PROFILES[k])}'un, ${ot.filter(t => petDone(op)[t.id]).length}/${ot.length} görev</span></button>`;
+  }).join("");
+  return `<section class="card" data-tone="pet">${head(`${kindOf(pet).icon} ${esc(pet.name)}`)}
+    <div class="pet-mini">${petSvg(pet, ps, petMood(ps), petStage(pet))}<div><p>${esc(petSays(pet, ps))}</p><p class="mini-empty">${pdone}/${ptasks.length} görev tamam · ⭐ ${pet.coins}</p></div></div>
+    ${others}
+    ${meetWaiting() ? `<button type="button" class="pet-meet-cta" data-open="pet" data-pet-show="meet">💞 Petler buluşmaya hazır!</button>` : ""}
+    <button class="link-btn" type="button" data-open="pet" data-pet-show="${profile}">Petime git →</button>
   </section>`;
 }
 
@@ -1922,11 +2186,17 @@ function updateBadges() {
 }
 
 function petLog(text, pet = myPet()) {
-  pet.log = [{ t: Date.now(), who: profile, text }, ...pet.log].slice(0, 12);
+  pet.log = [{ t: nowMs(), who: profile, text }, ...pet.log].slice(0, 12);
 }
 
 function petMark(key) {
   const pet = myPet();
+  if (!pet || !pet.kind) return false;
+  if (!clockOk()) {
+    syncClock();
+    setTimeout(() => toast("Saat doğrulanamadı, görev sayılmadı. İnternet bağlantını kontrol et."), 900);
+    return false;
+  }
   const today = todayStr();
   if (pet.day !== today) {
     pet.day = today;
@@ -1938,7 +2208,7 @@ function petMark(key) {
   if (!task) return false;
   const before = petLevel(pet);
   const stageBefore = petStage(pet);
-  pet.done[key] = { who: profile, t: Date.now() };
+  pet.done[key] = { who: profile, t: nowMs() };
   pet.xp += task.xp;
   pet.coins += starsOf(task.xp);
   addWeek(pet, task.xp);
@@ -1953,10 +2223,10 @@ function petMark(key) {
   }
   if (petLevel(pet) > before) {
     msg = petStage(pet) > stageBefore
-      ? `${pet.name} büyüdü! Artık bir ${PET_STAGES[petStage(pet)].toLocaleLowerCase("tr")}`
+      ? `${pet.name} büyüdü! Artık bir ${stageName(pet).toLocaleLowerCase("tr")}`
       : `${pet.name} seviye ${petLevel(pet)} oldu!`;
   }
-  pet.updated = Date.now();
+  pet.updated = nowMs();
   setTimeout(() => toast(msg), 900);
   return true;
 }
@@ -1979,24 +2249,29 @@ function petUnmark(key) {
     pet.coins = Math.max(0, pet.coins - starsOf(task.xp));
     addWeek(pet, -task.xp);
   }
-  pet.updated = Date.now();
+  pet.updated = nowMs();
 }
 
 function petAction(kind) {
   const a = PET_ACTIONS[kind];
   const pet = myPet();
-  if (!a) return;
+  if (!a || !pet.kind) return;
+  if (!clockOk()) {
+    syncClock();
+    toast("Saat doğrulanıyor, birazdan tekrar dene");
+    return;
+  }
   const cur = petNow(pet);
   if (cur[a.full] >= 95) {
     toast(a.fullMsg);
     return;
   }
-  Object.entries(a.change).forEach(([k, v]) => { cur[k] = Math.round(Math.max(0, Math.min(100, cur[k] + v)) * 10) / 10; });
+  Object.entries(a.change).forEach(([k, v]) => { cur[k] = Math.max(0, Math.min(100, cur[k] + v)); });
   PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
   pet.stats = cur;
-  pet.at = Date.now();
+  pet.at = nowMs();
   petLog(a.says);
-  pet.updated = Date.now();
+  pet.updated = nowMs();
   if (PET_TASKS.some(t => t.id === kind)) petMark(kind);
   petFx = { kind, owner: profile, until: Date.now() + 1500 };
   save();
@@ -2006,61 +2281,54 @@ function petAction(kind) {
 
 function petClock(t) {
   const d = new Date(t);
-  const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  return ymd(d) === todayStr() ? time : `${d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })} ${time}`;
+  const time = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  return dayOf(t) === todayStr() ? time : `${d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", timeZone: TZ })} ${time}`;
 }
 
 const CARE_KEYS = ["feed", "play", "wash"];
-const MEET_XP = 10;
-const MEET_STARS = 5;
-let meetFx = 0;
-
-const caredToday = pet => CARE_KEYS.some(k => petDone(pet)[k]);
+const caredToday = pet => pet.kind && CARE_KEYS.some(k => petDone(pet)[k]);
 const meetReady = () => Object.keys(PROFILES).every(k => caredToday(data.pets[k]));
-const meetWaiting = () => meetReady() && myPet().meetDay !== todayStr();
+const meetWaiting = () => meetReady() && !petDone(myPet()).meet;
 
 function petSwitcher(sel) {
-  return Object.keys(PROFILES).map(k =>
-    `<button type="button" class="chip pet-chip" data-pet-show="${k}" aria-pressed="${k === sel}">${k === profile ? "Benim" : esc(PROFILES[k]) + "'un"}: ${esc(data.pets[k].name)}</button>`
-  ).join("") + `<button type="button" class="chip pet-chip" data-pet-show="meet" aria-pressed="${sel === "meet"}">💞 Buluşma${meetWaiting() ? ' <b class="chip-dot">!</b>' : ""}</button>`;
+  return Object.keys(PROFILES).map(k => {
+    const p = data.pets[k];
+    const nm = p.kind ? `${kindOf(p).icon} ${esc(p.name)}` : "🥚";
+    return `<button type="button" class="chip pet-chip" data-pet-show="${k}" aria-pressed="${k === sel}">${k === profile ? "Benim" : esc(PROFILES[k]) + "'un"}: ${nm}</button>`;
+  }).join("") + `<button type="button" class="chip pet-chip" data-pet-show="meet" aria-pressed="${sel === "meet"}">💞 Buluşma${meetWaiting() ? ' <b class="chip-dot">!</b>' : ""}</button>`;
 }
 
 function meetClaim() {
   const pet = myPet();
-  const today = todayStr();
-  if (!meetReady() || pet.meetDay === today) return;
-  pet.meetDay = today;
+  if (!meetReady() || petDone(pet).meet) return;
+  if (!petMark("meet")) return;
+  pet.meetDay = todayStr();
   pet.meets = (Number(pet.meets) || 0) + 1;
-  pet.xp += MEET_XP;
-  pet.coins += MEET_STARS;
-  addWeek(pet, MEET_XP);
   const cur = petNow(pet);
   cur.fun = Math.min(100, cur.fun + 20);
   PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
   pet.stats = cur;
-  pet.at = Date.now();
-  const other = otherOf(profile);
-  petLog(`${data.pets[other].name} ile buluştu 💞`);
-  pet.updated = Date.now();
+  pet.at = nowMs();
+  petLog(`${data.pets[otherOf(profile)].name} ile buluştu 💞`);
+  pet.updated = nowMs();
   meetFx = Date.now() + 2800;
   save();
   renderPet();
   renderHome();
-  setTimeout(() => toast(`Buluşma harika geçti! +${MEET_XP} XP, +${MEET_STARS} ⭐`), 700);
 }
 
 function meetHtml() {
   const keys = Object.keys(PROFILES);
-  const today = todayStr();
   const ready = meetReady();
-  const mineDone = myPet().meetDay === today;
-  const together = ready && keys.some(k => data.pets[k].meetDay === today);
+  const mineDone = !!petDone(myPet()).meet;
+  const together = ready && keys.some(k => petDone(data.pets[k]).meet);
   const go = meetFx > Date.now();
   const other = otherOf(profile);
   const meets = Math.max(...keys.map(k => Number(data.pets[k].meets) || 0));
 
   const pets = keys.map((k, i) => {
     const p = data.pets[k];
+    if (!p.kind) return `<div class="meet-pet ${i ? "r" : "l"}"><div class="pet-egg big" aria-hidden="true">🥚</div><span class="meet-name">${esc(PROFILES[k])}</span></div>`;
     const st = petNow(p);
     return `<div class="meet-pet ${i ? "r" : "l"}">
       ${petSvg(p, st, together ? "happy" : petMood(st), petStage(p))}
@@ -2079,12 +2347,12 @@ function meetHtml() {
 
   let action;
   if (!ready) {
-    action = `<p class="meet-text">Buluşma için ikinizin de bugün kendi canavarına bakması gerek: beslemek, oynamak ya da yıkamak yeter.</p>`;
+    action = `<p class="meet-text">Buluşma için ikinizin de bugün kendi petine bakması gerek: beslemek, oynamak ya da yıkamak yeter.</p>`;
   } else if (!mineDone) {
-    action = `<p class="meet-text">İkiniz de bugün canavarınıza baktınız. ${esc(myPet().name)} ile ${esc(data.pets[other].name)} buluşmaya hazır!</p>
+    action = `<p class="meet-text">İkiniz de bugün petinize baktınız. ${esc(myPet().name)} ile ${esc(data.pets[other].name)} buluşmaya hazır!</p>
       <button type="button" class="btn primary meet-btn" data-meet-go="1">💞 Buluştur</button>`;
   } else {
-    action = `<p class="meet-text">Bugün buluştular! Ödülünü aldın.${data.pets[other].meetDay === today ? "" : ` ${esc(PROFILES[other])} girince o da ödülünü alacak.`}</p>`;
+    action = `<p class="meet-text">Bugün buluştular! Ödülünü aldın.${petDone(data.pets[other]).meet ? "" : ` ${esc(PROFILES[other])} girince o da ödülünü alacak.`}</p>`;
   }
 
   return `<section class="meet-card">
@@ -2101,29 +2369,58 @@ function meetHtml() {
     <div class="meet-info">
       <div class="meet-status">${status}</div>
       ${action}
-      <p class="pet-hint">Her buluşmada iki canavarın sahibi de +${MEET_XP} XP ve +${MEET_STARS} ⭐ kazanır.${meets ? ` Şimdiye kadar ${meets} kez buluştular.` : ""}</p>
+      <p class="pet-hint">Buluşma, ikinizin de görev listesinde +15 XP'lik bir görev.${meets ? ` Şimdiye kadar ${meets} kez buluştular.` : ""}</p>
     </div>
+  </section>`;
+}
+
+function chooserHtml() {
+  const opts = Object.entries(PET_KINDS).map(([k, v]) =>
+    `<button type="button" class="pet-pick${chooseKind === k ? " on" : ""}" data-pet-kind-pick="${k}" aria-pressed="${chooseKind === k}">
+      ${petSvg({ kind: k, color: v.colors[0], wear: {}, name: v.name }, FULL_STATS, "happy", 1, {}, false)}
+      <strong>${v.icon} ${v.name}</strong>
+    </button>`
+  ).join("");
+  return `<section class="card plain pet-choose">
+    <h3>Hangi peti istersin?</h3>
+    <p class="pet-hint">Herkes sıfır puanla ve ${START_STARS} ⭐ hediyeyle başlıyor. Türünü sonra da değiştirebilirsin, ilerlemen kaybolmaz.</p>
+    <div class="pet-picks">${opts}</div>
+    <form class="pet-rename" data-pet-form="choose" autocomplete="off">
+      <input name="name" maxlength="24" value="${esc(chooseName)}" placeholder="Adı, örn. ${esc(PET_KINDS[chooseKind].def)}" aria-label="Petinin adı">
+      <button type="submit" class="btn primary">Başla</button>
+    </form>
   </section>`;
 }
 
 function renderPet() {
   const el = $("petView");
-  if (!el) return;
+  if (!el || !data) return;
+  const head = sub => `<header class="view-head">
+      <div class="view-title">
+        <span class="view-icon" aria-hidden="true">${iconSvg("pet")}</span>
+        <div><h2>Petlerimiz</h2><p class="view-sub">${sub}</p></div>
+      </div>
+    </header>`;
+  if (!myPet().kind) {
+    el.innerHTML = head("Önce kendi petini seç") + chooserHtml();
+    return;
+  }
   if (petShow === "meet") {
-    el.innerHTML = `
-      <header class="view-head">
-        <div class="view-title">
-          <span class="view-icon" aria-hidden="true">${iconSvg("pet")}</span>
-          <div><h2>Canavarlarımız</h2><p class="view-sub">Buluşma</p></div>
-        </div>
-      </header>
-      <div class="filters pet-switch" role="group" aria-label="Canavar seç">${petSwitcher("meet")}</div>
+    el.innerHTML = `${head("Buluşma")}
+      <div class="filters pet-switch" role="group" aria-label="Pet seç">${petSwitcher("meet")}</div>
       ${meetHtml()}`;
     return;
   }
   const owner = PROFILES[petShow] ? petShow : profile;
   const mine = owner === profile;
   const pet = data.pets[owner];
+  const ownerName = PROFILES[owner];
+  const switcher = `<div class="filters pet-switch" role="group" aria-label="Pet seç">${petSwitcher(owner)}</div>`;
+  if (!pet.kind) {
+    el.innerHTML = `${head(esc(ownerName) + "'un peti")}${switcher}
+      <section class="card plain pet-wait"><div class="pet-egg big" aria-hidden="true">🥚</div><p>${esc(ownerName)} henüz petini seçmedi. Girince yumurtadan çıkacak!</p></section>`;
+    return;
+  }
   const stats = petNow(pet);
   const mood = petMood(stats);
   const stage = petStage(pet);
@@ -2133,10 +2430,9 @@ function renderPet() {
   const into = pet.xp % LEVEL_XP;
   const streak = petStreak(pet);
   const fx = petFx && petFx.until > Date.now() && petFx.owner === owner ? petFx : null;
-  const fxList = fx ? (fx.kind === "love" ? ["❤️", "💕", "❤️"] : PET_ACTIONS[fx.kind].fx) : [];
-  const ownerName = PROFILES[owner];
+  const fxList = fx ? (fx.kind === "emoji" ? [fx.e, fx.e, fx.e] : PET_ACTIONS[fx.kind] ? PET_ACTIONS[fx.kind].fx : []) : [];
+  const fxHtml = fxList.map((e, i) => `<span class="pet-fx" style="--x:${(i - 1) * 34}px;--d:${i * 0.14}s" aria-hidden="true">${esc(e)}</span>`).join("");
 
-  const fxHtml = fxList.map((e, i) => `<span class="pet-fx" style="--x:${(i - 1) * 34}px;--d:${i * 0.14}s" aria-hidden="true">${e}</span>`).join("");
   const statsHtml = PET_STATS.map(s => {
     const v = Math.round(stats[s.k]);
     return `<div class="pet-stat${v < 30 ? " low" : ""}">
@@ -2144,20 +2440,30 @@ function renderPet() {
       <div class="progress"><div class="progress-fill" style="width:${v}%"></div></div>
     </div>`;
   }).join("");
-  const actions = mine
-    ? `<div class="pet-actions">${Object.entries(PET_ACTIONS).map(([k, a]) =>
-        `<button type="button" class="pet-act" data-pet-act="${k}"><span aria-hidden="true">${a.icon}</span>${esc(a.label)}</button>`
-      ).join("")}</div>`
-    : `<div class="pet-visit">
-        <button type="button" class="pet-act" data-pet-love="${owner}"><span aria-hidden="true">❤️</span>Sev</button>
-        <p>Bu ${esc(ownerName)}'un canavarı. Bakımını ${esc(ownerName)} yapıyor, sen ona sevgi gönderebilirsin.</p>
-      </div>`;
-  const swatches = mine
-    ? `<div class="pet-colors" role="group" aria-label="Renk seç">${PET_COLORS.map(col =>
-        `<button type="button" class="pet-swatch" style="background:${col}" data-pet-color="${col}" aria-pressed="${col === pet.color}" aria-label="Renk"></button>`
-      ).join("")}</div>`
-    : "";
 
+  let controls;
+  if (mine) {
+    controls = `<div class="pet-actions">${Object.entries(PET_ACTIONS).map(([k, a]) =>
+        `<button type="button" class="pet-act" data-pet-act="${k}"><span aria-hidden="true">${a.icon}</span>${esc(a.label)}</button>`
+      ).join("")}</div>
+      <div class="pet-looks">
+        <div class="filters pet-kinds" role="group" aria-label="Pet türü">${Object.entries(PET_KINDS).map(([k, v]) =>
+          `<button type="button" class="chip" data-pet-kind="${k}" aria-pressed="${pet.kind === k}">${v.icon} ${v.name}</button>`
+        ).join("")}</div>
+        <div class="pet-colors" role="group" aria-label="Renk seç">${kindOf(pet).colors.map(col =>
+          `<button type="button" class="pet-swatch" style="background:${col}" data-pet-color="${col}" aria-pressed="${col === pet.color}" aria-label="Renk"></button>`
+        ).join("")}</div>
+      </div>`;
+  } else {
+    const left = Math.max(0, SEND_LIMIT - sentToday());
+    controls = `<div class="emoji-send">
+      <p class="emoji-send-t">${esc(ownerName)}'a emoji gönder <span>${left ? `bugün ${left} hakkın kaldı` : "bugünlük hakkın bitti"}</span></p>
+      <div class="emoji-grid">${SEND_EMOJIS.map(e => `<button type="button" class="emoji-btn" data-emoji-send="${e}"${left ? "" : " disabled"}>${e}</button>`).join("")}</div>
+      <p class="pet-hint">Bu ${esc(ownerName)}'un peti. Bakımını o yapıyor, sen emoji gönderip onu sevindirebilirsin.</p>
+    </div>`;
+  }
+
+  const other = otherOf(profile);
   const taskRows = tasks.map(t => {
     const d = done[t.id];
     const sub = d ? "Yapıldı" : `+${t.xp} XP`;
@@ -2168,31 +2474,36 @@ function renderPet() {
         <button type="button" class="icon-btn pet-del" data-pet-del="${esc(t.custom)}" aria-label="Görevi sil">×</button>
       </li>`;
     }
+    let goBtn = "";
+    if (mine && !d && t.go) goBtn = `<button type="button" class="btn small ghost" data-open="${t.go}">Git</button>`;
+    else if (mine && !d && t.show) goBtn = `<button type="button" class="btn small ghost" data-open="pet" data-pet-show="${t.show === "other" ? other : "meet"}">Git</button>`;
     return `<li class="pet-task${d ? " done" : ""}">
       <span class="pet-tick" aria-hidden="true">${d ? "✓" : ""}</span>
       <span class="pet-task-t"><span>${esc(t.title)}</span><em>${sub}</em></span>
-      ${mine && !d && t.go ? `<button type="button" class="btn small ghost" data-open="${t.go}">Git</button>` : ""}
+      ${goBtn}
     </li>`;
   }).join("");
+
+  const addTask = mine
+    ? pet.tasks.length < CUSTOM_MAX
+      ? `<form class="pet-addtask" data-pet-form="task" autocomplete="off">
+          <input name="title" maxlength="60" placeholder="Kendi görevini ekle, örn. 2 litre su iç" aria-label="Yeni görev">
+          <button type="submit" class="btn small primary">Ekle</button>
+        </form>`
+      : `<p class="pet-hint">En fazla ${CUSTOM_MAX} kendi görevini ekleyebilirsin.</p>`
+    : "";
 
   const log = pet.log.length
     ? `<ul>${pet.log.slice(0, 8).map(l => `<li>${esc(PROFILES[l.who] || "")} ${esc(l.text)}<time>${esc(petClock(l.t))}</time></li>`).join("")}</ul>`
     : `<p class="mini-empty">${mine ? "Henüz bakım yapılmadı. İlk bakımı sen yap!" : "Henüz bakım yapılmadı."}</p>`;
 
-  const switcher = petSwitcher(owner);
-
   el.innerHTML = `
-    <header class="view-head">
-      <div class="view-title">
-        <span class="view-icon" aria-hidden="true">${iconSvg("pet")}</span>
-        <div><h2>Canavarlarımız</h2><p class="view-sub">${mine ? "Senin canavarın" : esc(ownerName) + "'un canavarı"}: seviye ${petLevel(pet)}${streak ? `, ${streak} günlük seri` : ""}</p></div>
-      </div>
-    </header>
-    <div class="filters pet-switch" role="group" aria-label="Canavar seç">${switcher}</div>
+    ${head(`${mine ? "Senin petin" : esc(ownerName) + "'un peti"}: seviye ${petLevel(pet)}${streak ? `, ${streak} günlük seri 🔥` : ""}`)}
+    ${switcher}
     <div class="pet-layout">
       <section class="pet-card${mine ? "" : " visiting"}">
         <div class="pet-top">
-          <div><h3 class="pet-name">${esc(pet.name)}</h3><p class="pet-meta">⭐ ${pet.coins} · ${esc(ownerName)}'un ${esc(PET_STAGES[stage].toLocaleLowerCase("tr"))}ı, seviye ${petLevel(pet)}</p></div>
+          <div><h3 class="pet-name">${esc(pet.name)}</h3><p class="pet-meta">⭐ ${pet.coins} · ${esc(ownerName)}'un ${esc(stageName(pet).toLocaleLowerCase("tr"))}ı, seviye ${petLevel(pet)}</p></div>
           ${mine && !petRenaming ? '<button type="button" class="btn small ghost" data-pet="rename">Adını değiştir</button>' : ""}
         </div>
         ${mine && petRenaming ? `<form class="pet-rename" data-pet-form="rename" autocomplete="off">
@@ -2200,15 +2511,17 @@ function renderPet() {
           <button type="submit" class="btn small primary">Kaydet</button>
           <button type="button" class="btn small" data-pet="cancel">Vazgeç</button>
         </form>` : ""}
-        <div class="pet-stage${fx ? ` act act-${fx.kind}` : ""}">
-          ${petSvg(pet, stats, mood, stage)}
+        <div class="pet-scene">
           <p class="pet-bubble">${esc(petSays(pet, stats, mine))}</p>
+          <div class="pet-stage pet-bg bg-${pet.wear.bg || "none"}${fx ? ` act act-${fx.kind}` : ""}">
+            ${decoHtml(pet)}
+            ${petSvg(pet, stats, mood, stage)}
+          </div>
           ${fxHtml}
         </div>
         <div class="pet-xp"><div class="progress"><div class="progress-fill" style="width:${into}%"></div></div><span>${into}/${LEVEL_XP} XP</span></div>
         <div class="pet-stats">${statsHtml}</div>
-        ${actions}
-        ${swatches}
+        ${controls}
       </section>
       <div class="pet-side">
         ${weekCard(owner)}
@@ -2216,13 +2529,11 @@ function renderPet() {
           <header class="card-head"><h3>${mine ? "Bugünkü görevlerin" : esc(ownerName) + "'un bugünkü görevleri"}</h3><span class="pet-count">${nDone}/${tasks.length}</span></header>
           <div class="progress slim"><div class="progress-fill" style="width:${tasks.length ? (nDone / tasks.length) * 100 : 0}%"></div></div>
           <ul class="pet-tasklist">${taskRows}</ul>
-          ${mine ? `<form class="pet-addtask" data-pet-form="task" autocomplete="off">
-            <input name="title" maxlength="60" placeholder="Kendi görevini ekle, örn. 2 litre su iç" aria-label="Yeni görev">
-            <button type="submit" class="btn small primary">Ekle</button>
-          </form>
-          <p class="pet-hint">Görevler her gün yenilenir. Hepsini bitirince canavarın bonus XP kazanır.</p>` : ""}
+          ${addTask}
+          ${mine ? `<p class="pet-hint">${clockOk() ? "Görevler her gece yarısı (Türkiye saati) yenilenir." : "Saat doğrulanıyor… İnternet yoksa görevler sayılmaz."}</p>` : ""}
         </section>
         ${mine ? shopCard() : ""}
+        ${mine ? emojiCard() : ""}
         <section class="card plain pet-log">
           <header class="card-head"><h3>Son olanlar</h3></header>
           ${log}
@@ -2235,39 +2546,46 @@ document.addEventListener("submit", e => {
   const f = e.target.closest("[data-pet-form]");
   if (!f) return;
   e.preventDefault();
+  const type = f.dataset.petForm;
   const pet = myPet();
-  const v = String(new FormData(f).get(f.dataset.petForm === "rename" ? "name" : "title") || "").trim();
+  const v = String(new FormData(f).get(type === "task" ? "title" : "name") || "").trim();
+  if (type === "choose") {
+    const k = PET_KINDS[chooseKind] ? chooseKind : "duck";
+    pet.kind = k;
+    pet.name = (v || PET_KINDS[k].def).slice(0, 24);
+    pet.color = PET_KINDS[k].colors[0];
+    pet.stats = { food: 80, fun: 80, clean: 80, energy: 80 };
+    pet.at = nowMs();
+    chooseName = "";
+    petLog(`${PET_KINDS[k].name.toLocaleLowerCase("tr")} ${pet.name} ile tanıştı`);
+    pet.updated = nowMs();
+    petShow = profile;
+    petFx = { kind: "play", owner: profile, until: Date.now() + 1500 };
+    save();
+    renderPet();
+    renderHome();
+    toast(`Merhaba ${pet.name}!`);
+    return;
+  }
   if (!v) return;
-  if (f.dataset.petForm === "rename") {
+  if (type === "rename") {
     pet.name = v.slice(0, 24);
     petRenaming = false;
     petLog(`adını “${pet.name}” yaptı`);
     toast("Yeni adı " + pet.name);
   } else {
+    if (pet.tasks.length >= CUSTOM_MAX) {
+      toast(`En fazla ${CUSTOM_MAX} kendi görevini ekleyebilirsin`);
+      return;
+    }
     pet.tasks.push({ id: newId(), title: v.slice(0, 60), by: profile });
     toast("Görev eklendi");
   }
-  pet.updated = Date.now();
+  pet.updated = nowMs();
   save();
   renderPet();
   renderHome();
 });
-
-function petLove(owner) {
-  const pet = data.pets[owner];
-  if (!pet || owner === profile) return;
-  const cur = petNow(pet);
-  cur.fun = Math.min(100, cur.fun + 8);
-  PET_STATS.forEach(s => { cur[s.k] = Math.round(cur[s.k] * 10) / 10; });
-  pet.stats = cur;
-  pet.at = Date.now();
-  petLog("sevgi gönderdi", pet);
-  pet.updated = Date.now();
-  petFx = { kind: "love", owner, until: Date.now() + 1500 };
-  save();
-  renderPet();
-  toast(`${pet.name} çok sevindi!`);
-}
 
 async function petClick(e) {
   const slot = e.target.closest("[data-shop-slot]");
@@ -2283,6 +2601,46 @@ async function petClick(e) {
   const shop = e.target.closest("[data-shop]");
   if (shop) {
     shopClick(shop.dataset.shop);
+    return true;
+  }
+  const deco = e.target.closest("[data-deco]");
+  if (deco) {
+    decoClick(deco.dataset.deco);
+    return true;
+  }
+  if (e.target.closest("[data-deco-clear]")) {
+    myPet().deco = [];
+    myPet().updated = nowMs();
+    save();
+    renderPet();
+    return true;
+  }
+  const es = e.target.closest("[data-emoji-send]");
+  if (es) {
+    sendEmoji(es.dataset.emojiSend);
+    return true;
+  }
+  const pick = e.target.closest("[data-pet-kind-pick]");
+  if (pick) {
+    const inp = document.querySelector('[data-pet-form="choose"] input');
+    chooseName = inp ? inp.value : "";
+    chooseKind = pick.dataset.petKindPick;
+    renderPet();
+    return true;
+  }
+  const pk = e.target.closest("[data-pet-kind]");
+  if (pk) {
+    const pet = myPet();
+    const k = pk.dataset.petKind;
+    if (!PET_KINDS[k] || pet.kind === k) return true;
+    pet.kind = k;
+    if (!PET_KINDS[k].colors.includes(pet.color)) pet.color = PET_KINDS[k].colors[0];
+    petLog(`${PET_KINDS[k].name.toLocaleLowerCase("tr")} oldu`);
+    pet.updated = nowMs();
+    petFx = { kind: "play", owner: profile, until: Date.now() + 1200 };
+    save();
+    renderPet();
+    renderHome();
     return true;
   }
   const lt = e.target.closest("[data-letter-tab]");
@@ -2330,11 +2688,6 @@ async function petClick(e) {
     renderPet();
     return !show.hasAttribute("data-open");
   }
-  const love = e.target.closest("[data-pet-love]");
-  if (love) {
-    petLove(love.dataset.petLove);
-    return true;
-  }
   const act = e.target.closest("[data-pet-act]");
   if (act) {
     petAction(act.dataset.petAct);
@@ -2355,8 +2708,10 @@ async function petClick(e) {
   }
   const col = e.target.closest("[data-pet-color]");
   if (col) {
-    myPet().color = col.dataset.petColor;
-    myPet().updated = Date.now();
+    const pet = myPet();
+    if (!kindOf(pet).colors.includes(col.dataset.petColor)) return true;
+    pet.color = col.dataset.petColor;
+    pet.updated = nowMs();
     save();
     renderPet();
     renderHome();
@@ -2364,8 +2719,9 @@ async function petClick(e) {
   }
   const task = e.target.closest("[data-pet-task]");
   if (task) {
-    if (task.checked) petMark(task.dataset.petTask);
-    else petUnmark(task.dataset.petTask);
+    if (task.checked) {
+      if (!petMark(task.dataset.petTask)) task.checked = false;
+    } else petUnmark(task.dataset.petTask);
     save();
     renderPet();
     renderHome();
@@ -2377,7 +2733,7 @@ async function petClick(e) {
     if (!t || !(await askDelete(t.title))) return true;
     petUnmark("c:" + t.id);
     myPet().tasks = myPet().tasks.filter(x => x.id !== t.id);
-    myPet().updated = Date.now();
+    myPet().updated = nowMs();
     save();
     renderPet();
     renderHome();
@@ -2390,19 +2746,18 @@ function mergePet(a, b) {
   if (!a) return b;
   if (!b) return a;
   const [n, o] = (Number(b.updated) || 0) > (Number(a.updated) || 0) ? [b, a] : [a, b];
-  if (n === o || !o.day || o.day !== n.day) return n;
+  if (n === o || !n.kind || !o.day || o.day !== n.day) return n;
   const extra = Object.keys(o.done || {}).filter(k => !(n.done || {})[k]);
   if (!extra.length) return n;
   const all = petAllTasks(n);
-  const m = { ...n, done: { ...n.done }, log: [...n.log] };
+  const m = { ...n, done: { ...n.done }, log: [...n.log], weeks: { ...n.weeks } };
   extra.forEach(k => {
     const t = all.find(x => x.id === k);
     if (!t) return;
     m.done[k] = o.done[k];
     m.xp += t.xp;
     m.coins = (m.coins || 0) + starsOf(t.xp);
-    m.weeks = { ...m.weeks };
-    const wk = weekKey(new Date(o.done[k].t || Date.now()));
+    const wk = weekKey(Number(o.done[k].t) || nowMs());
     m.weeks[wk] = (Number(m.weeks[wk]) || 0) + t.xp;
   });
   const seen = new Set(m.log.map(l => l.t + ":" + l.who));
@@ -2443,7 +2798,8 @@ function normalizeData(d) {
   const out = {};
   [...SECTIONS, ...LIST_EXTRA].forEach(sec => { out[sec] = Array.isArray(d && d[sec]) ? d[sec].filter(x => x && x.id) : []; });
   out.bulmaca = normalizePuzzle(d && d.bulmaca);
-  out.pets = normalizePets(d && d.pets, d && d.pet);
+  out.emojis = trimEmojis(out.emojis);
+  out.pets = normalizePets(d && d.pets);
   out.deleted = normalizeDeleted(d && d.deleted);
   return out;
 }
@@ -2494,6 +2850,7 @@ function adopt(next) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch {}
   render();
   checkLetters();
+  checkEmojis();
   return true;
 }
 
@@ -2672,6 +3029,8 @@ function startPolling() {
 }
 
 async function syncOnOpen() {
+  await syncClock();
+  if (data) render();
   if (!DEFAULT_KEY) return;
   if (!cloud || !cloud.shared) {
     try {
@@ -2686,6 +3045,7 @@ async function syncOnOpen() {
   petSynced = true;
   claimWeekPrize();
   checkLetters();
+  checkEmojis();
   startPolling();
 }
 
@@ -2713,7 +3073,7 @@ function newId() {
   return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function todayStr() { return ymd(new Date()); }
+function todayStr() { return dayOf(nowMs()); }
 
 function formatDate(s) {
   const d = new Date(s + "T00:00:00");
@@ -2872,6 +3232,7 @@ function setProfile(p) {
   window.scrollTo(0, 0);
   claimWeekPrize();
   setTimeout(checkLetters, 400);
+  setTimeout(checkEmojis, 900);
 }
 
 /* ---------- Kart şablonları ---------- */
@@ -3079,6 +3440,7 @@ function subtitle(sec) {
   }
   if (sec === "pet") {
     const pet = myPet();
+    if (!pet.kind) return "Petini seç";
     const t = petAllTasks(pet);
     const d = t.filter(x => petDone(pet)[x.id]).length;
     return `${d}/${t.length} görev, seviye ${petLevel(pet)}`;
@@ -3229,23 +3591,7 @@ function renderHome() {
     <button class="link-btn" type="button" data-open="mood">Hissettiklerime git →</button>
   </section>`;
 
-  const pet = myPet();
-  const ps = petNow(pet);
-  const ptasks = petAllTasks(pet);
-  const pdone = ptasks.filter(t => petDone(pet)[t.id]).length;
-  const others = Object.keys(PROFILES).filter(k => k !== profile).map(k => {
-    const op = data.pets[k];
-    const os = petNow(op);
-    const ot = petAllTasks(op);
-    return `<button type="button" class="pet-other" data-open="pet" data-pet-show="${k}">${petSvg(op, os, petMood(os), petStage(op))}<span><strong>${esc(op.name)}</strong> ${esc(PROFILES[k])}'un, ${ot.filter(t => petDone(op)[t.id]).length}/${ot.length} görev</span></button>`;
-  }).join("");
-  const petCard = `<section class="card" data-tone="pet">
-    <header class="card-head"><span class="card-icon">${iconSvg("pet")}</span><h3>${esc(pet.name)}</h3></header>
-    <div class="pet-mini">${petSvg(pet, ps, petMood(ps), petStage(pet))}<div><p>${esc(petSays(pet, ps))}</p><p class="mini-empty">${pdone}/${ptasks.length} görev tamam</p></div></div>
-    ${others}
-    ${meetWaiting() ? `<button type="button" class="pet-meet-cta" data-open="pet" data-pet-show="meet">💞 Canavarlar buluşmaya hazır!</button>` : ""}
-    <button class="link-btn" type="button" data-open="pet" data-pet-show="${profile}">Canavarıma git →</button>
-  </section>`;
+  const petCard = homePetCard();
 
   const tiles = HOME_TILES.map(id => {
     const n = NAV.find(x => x.id === id);
@@ -3693,6 +4039,7 @@ $("editorForm").addEventListener("submit", e => {
     };
     data[current].push({ id: newId(), created: now, updated: now, author: profile, ...(extras[current] || {}), ...values });
     if (current === "notes" || current === "ideas") petMark("note");
+    if (current === "films" || current === "growth") petMark("share");
     if (current === "mood" && values.date === todayStr()) petMark("mood");
   }
   save();
@@ -3758,6 +4105,10 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     tick();
     renderHome();
+    syncClock(true).then(() => {
+      renderHome();
+      if (active === "pet") renderPet();
+    });
     if (cloud && !pendingPush) pullNow();
   }
 });
