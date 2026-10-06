@@ -358,7 +358,7 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
   .back-btn span { display: none; }
 }
 
-/* Canavarımız */
+/* Petlerimiz */
 [data-tone="pet"], .view[data-sec="pet"] { --c: #7A5AC8; --tint: #EEE8FA; }
 
 .pet-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
@@ -375,36 +375,51 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
 .pet-rename { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
 .pet-rename input { flex: 1 1 10rem; min-width: 0; }
 
+.pet-scene { position: relative; display: flex; flex-direction: column; align-items: center; max-width: 20rem; margin: 0.9rem auto 0.8rem; }
 .pet-stage {
   position: relative;
-  max-width: 17rem;
-  margin: 0.8rem auto 0.6rem;
-  padding-top: 1.6rem;
+  width: 100%;
+  padding: 1.6rem 2.2rem 0.6rem;
+  overflow: hidden;
   border-radius: var(--radius-l);
-  background: radial-gradient(circle at 50% 78%, var(--tint) 0 55%, transparent 72%);
 }
-.pet-svg { display: block; width: 100%; height: auto; transform-origin: 50% 95%; animation: pet-bob 2.8s ease-in-out infinite; }
+.pet-stage .pet-svg { position: relative; z-index: 1; }
+.pet-svg { display: block; width: 100%; height: auto; overflow: visible; transform-origin: 50% 95%; animation: pet-bob 2.8s ease-in-out infinite; }
+.pet-svg.still, .pet-svg.still * { animation: none !important; }
 .pet-stage.act .pet-svg { animation: pet-jump 0.7s ease 2; }
 .pet-stage.act-sleep .pet-svg { animation: pet-snooze 1.5s ease; }
 .pet-stage.act-play .pet-arm { animation: pet-wave 0.35s ease-in-out 4 alternate; transform-box: fill-box; transform-origin: 50% 90%; }
 .pet-bubble {
-  position: absolute;
-  top: 0;
-  right: -0.5rem;
-  max-width: 10rem;
-  margin: 0;
-  padding: 0.45rem 0.75rem;
+  position: relative;
+  max-width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.9rem;
   border: 1px solid var(--line);
-  border-radius: 14px 14px 14px 4px;
+  border-radius: 16px;
   background: var(--surface);
   box-shadow: var(--shadow);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   line-height: 1.3;
+  text-align: center;
+}
+.pet-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
 }
 .pet-fx {
   position: absolute;
   left: 50%;
-  top: 48%;
+  top: 58%;
+  z-index: 3;
   font-size: 1.7rem;
   pointer-events: none;
   animation: pet-float 1.3s ease-out var(--d) both;
@@ -504,10 +519,9 @@ dialog.confirm form#lockForm { padding: 2rem 1.5rem 1.5rem; }
 }
 @media (max-width: 420px) {
   .pet-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pet-bubble { right: 0; max-width: 8.5rem; }
 }
 
-/* Canavarlar: kişiye özel */
+/* Petler: kişiye özel */
 .pet-switch { margin-bottom: 1rem; }
 .pet-card.visiting { border-style: dashed; }
 .pet-visit { display: flex; align-items: center; gap: 0.9rem; }
@@ -630,7 +644,7 @@ dialog.letter-dlg form { padding: 1.2rem; }
 .week-row.me .week-top span { font-weight: 600; }
 .pet-week .pet-hint { margin-top: 0.4rem; }
 
-/* Canavar canlılığı */
+/* Pet canlılığı */
 .pet-eye { transform-box: fill-box; transform-origin: center; animation: pet-blink 4.8s infinite; }
 .pet-ear { transform-box: fill-box; transform-origin: 70% 100%; animation: pet-ear 3.6s ease-in-out infinite; }
 .pet-ear.r { animation-delay: 0.4s; }
@@ -755,3 +769,173 @@ dialog.letter-dlg form { padding: 1.2rem; }
 :root[data-theme="dodom"] .meet-cloud { opacity: 0.18; }
 :root[data-theme="dodom"] .meet-grass { background: radial-gradient(ellipse at 50% 20%, #3E7A62, #2C5A4A 70%); }
 :root[data-theme="dodom"] .meet-check.ok { color: #7FD99A; }
+
+/* Petler: arka planlar */
+.pet-bg { background: radial-gradient(circle at 50% 80%, var(--tint) 0 52%, transparent 72%); }
+.pet-bg.bg-meadow {
+  background:
+    radial-gradient(circle at 84% 16%, #FFE27A 0 1.1rem, rgba(255, 226, 122, 0.35) 1.2rem 2rem, transparent 2.1rem),
+    radial-gradient(ellipse 30% 9% at 22% 22%, #FFFFFF 60%, transparent 62%),
+    linear-gradient(180deg, #BFE5FF 0 60%, #A6DE8C 60% 100%);
+}
+.pet-bg.bg-beach {
+  background:
+    radial-gradient(circle at 18% 18%, #FFE7A0 0 1rem, transparent 1.1rem),
+    linear-gradient(180deg, #BDE6FF 0 44%, #5DBFE0 44% 60%, #F3DCA2 60%);
+}
+.pet-bg.bg-snow {
+  background:
+    radial-gradient(circle, #FFFFFF 0 2.5px, transparent 3px) 0 0 / 34px 34px,
+    radial-gradient(circle, #FFFFFF 0 1.5px, transparent 2px) 17px 12px / 26px 26px,
+    linear-gradient(180deg, #C9DDF4 0 64%, #F5F9FF 64%);
+}
+.pet-bg.bg-sunset {
+  background:
+    radial-gradient(circle at 50% 66%, #FFE08A 0 2.4rem, rgba(255, 224, 138, 0.3) 2.5rem 3.6rem, transparent 3.7rem),
+    linear-gradient(180deg, #FFB37B 0%, #FF85A2 52%, #8A63B8 100%);
+}
+.pet-bg.bg-night {
+  background:
+    radial-gradient(circle at 80% 18%, #FFF6D6 0 0.9rem, transparent 1rem),
+    radial-gradient(circle, #FFFFFF 0 1px, transparent 1.6px) 0 0 / 38px 31px,
+    radial-gradient(circle, #FFFFFF 0 1.2px, transparent 1.8px) 14px 20px / 53px 47px,
+    linear-gradient(180deg, #121A40 0%, #3B3478 100%);
+}
+.pet-bg.bg-candy {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 4px, transparent 4.5px) 0 0 / 30px 30px,
+    linear-gradient(160deg, #FFD6E8 0%, #E7D9FF 100%);
+}
+.pet-bg.bg-space {
+  background:
+    radial-gradient(circle at 82% 22%, #FFB86B 0 1.2rem, transparent 1.3rem),
+    radial-gradient(ellipse 2.6rem 0.5rem at 82% 22%, transparent 70%, rgba(255, 210, 150, 0.8) 72%, transparent 80%),
+    radial-gradient(circle, #FFFFFF 0 1px, transparent 1.6px) 0 0 / 29px 37px,
+    radial-gradient(circle, #CFC2FF 0 1.3px, transparent 1.9px) 11px 17px / 47px 41px,
+    radial-gradient(circle at 30% 20%, #4B2D8A, #0B0A24 72%);
+}
+.pet-deco {
+  position: absolute;
+  z-index: 0;
+  font-size: 1.6rem;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: deco-float 3.4s ease-in-out var(--d) infinite;
+}
+@keyframes deco-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-6deg); }
+  50% { transform: translate(-50%, calc(-50% - 6px)) rotate(6deg); }
+}
+.pet-looks { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.1rem; }
+.pet-looks .filters, .pet-looks .pet-colors { margin: 0; justify-content: center; }
+
+/* Petler: seçim ekranı */
+.pet-choose { max-width: 38rem; margin: 0 auto; text-align: center; align-items: center; }
+.pet-choose h3 { font-family: "Fraunces", Georgia, serif; font-size: 1.6rem; font-weight: 600; }
+.pet-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; width: 100%; }
+.pet-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.9rem 0.6rem 1rem;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.pet-pick .pet-svg { max-width: 10rem; }
+.pet-pick:hover { border-color: color-mix(in srgb, var(--c) 50%, var(--line)); }
+.pet-pick.on { border-color: var(--c); background: var(--tint); }
+.pet-choose .pet-rename { width: 100%; max-width: 24rem; justify-content: center; }
+.pet-egg { font-size: 2.6rem; line-height: 1; display: inline-block; animation: egg-wobble 2.2s ease-in-out infinite; }
+.pet-egg.big { font-size: 4rem; }
+.pet-egg.small { font-size: 1.8rem; }
+@keyframes egg-wobble {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  78% { transform: rotate(-12deg); }
+  86% { transform: rotate(10deg); }
+  94% { transform: rotate(-5deg); }
+}
+.pet-wait { align-items: center; text-align: center; padding: 2rem 1.2rem; }
+.pet-wait p { margin: 0; color: var(--muted); }
+.meet-pet .pet-egg { margin-bottom: 1rem; }
+
+/* Petler: mağaza */
+.shop-grid { grid-template-columns: repeat(auto-fill, minmax(7.2rem, 1fr)); gap: 0.6rem; }
+.shop-item { position: relative; padding: 0.5rem 0.4rem 0.6rem; gap: 0.3rem; transition: transform 0.15s, border-color 0.15s; }
+.shop-item:hover { transform: translateY(-2px); }
+.shop-item.owned::after { content: "✓"; position: absolute; top: 0.35rem; right: 0.45rem; width: 1.15rem; height: 1.15rem; display: grid; place-items: center; border-radius: 50%; background: var(--c); color: var(--on-c); font-size: 0.7rem; font-weight: 700; }
+.shop-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 0.2rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 9%, var(--surface));
+  overflow: hidden;
+}
+.shop-thumb .pet-svg { width: 100%; }
+.shop-thumb.pet-bg { padding: 0; }
+.deco-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.7rem, 1fr)); gap: 0.4rem; }
+.deco-btn {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.deco-btn:hover { border-color: var(--c); }
+.deco-btn[aria-pressed="true"] { border-color: var(--c); background: var(--tint); box-shadow: inset 0 0 0 1px var(--c); }
+.pet-shop .btn.ghost { align-self: flex-start; }
+
+/* Petler: emoji */
+.emoji-send { display: flex; flex-direction: column; gap: 0.6rem; }
+.emoji-send-t { margin: 0; font-weight: 600; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem 0.6rem; }
+.emoji-send-t span { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+.emoji-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.4rem; }
+.emoji-btn {
+  padding: 0.5rem 0;
+  border: 1px solid color-mix(in srgb, var(--c) 18%, var(--line));
+  border-radius: 12px;
+  background: var(--tint);
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.emoji-btn:hover { border-color: var(--c); }
+.emoji-btn:active { transform: scale(0.9); }
+.emoji-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.emoji-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.4rem; }
+.emoji-list li { display: flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.5rem; border-radius: 12px; background: color-mix(in srgb, var(--c) 7%, var(--surface)); font-size: 0.85rem; }
+.emoji-list time { margin-left: auto; color: var(--muted); font-size: 0.75rem; }
+.emoji-big { font-size: 1.4rem; line-height: 1; }
+.pet-act-emoji .pet-svg { animation: pet-jump 0.7s ease 2; }
+.emoji-rain { position: fixed; inset: 0; z-index: 90; overflow: hidden; pointer-events: none; }
+.emoji-rain span {
+  position: absolute;
+  bottom: -3rem;
+  left: var(--x);
+  font-size: calc(2rem * var(--s));
+  animation: emoji-up 3.4s ease-in var(--d) forwards;
+  opacity: 0;
+}
+@keyframes emoji-up {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-105vh) rotate(25deg); }
+}
+
+@media (max-width: 420px) {
+  .emoji-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pet-stage { padding: 1.4rem 1.4rem 0.5rem; }
+}
